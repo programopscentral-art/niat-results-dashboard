@@ -30,10 +30,11 @@
 :root[data-theme="light"]{ color-scheme:light; }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ink);color:var(--fg);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh}
-body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;transform:translateZ(0);
   background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
   background-size:46px 46px;mask-image:radial-gradient(circle at 50% -10%,#000,transparent 80%)}
-.aurora{position:fixed;inset:-30%;z-index:-3;pointer-events:none;filter:blur(80px);opacity:.4}
+/* own GPU layer so it never repaints while the page scrolls */
+.aurora{position:fixed;inset:-30%;z-index:-3;pointer-events:none;filter:blur(55px);opacity:.35;transform:translateZ(0);will-change:transform;contain:strict}
 .aurora::before,.aurora::after{content:"";position:absolute;border-radius:50%}
 .aurora::before{width:46vw;height:46vw;left:8%;top:2%;background:radial-gradient(circle,var(--primary-glow),transparent 60%);animation:drift 22s ease-in-out infinite alternate}
 .aurora::after{width:38vw;height:38vw;right:6%;top:0;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 40%,transparent),transparent 60%);animation:drift 26s ease-in-out infinite alternate-reverse}
@@ -47,7 +48,7 @@ button{font-family:inherit;cursor:pointer}
 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* top bar */
-header.bar-wrap{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--ink) 72%,transparent);border-bottom:1px solid var(--line)}
+header.bar-wrap{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--ink) 94%,transparent);border-bottom:1px solid var(--line)}
 .bar{max-width:1240px;margin:0 auto;padding:0 22px;height:64px;display:flex;align-items:center;gap:16px}
 .logo{display:flex;align-items:center;gap:11px;font-family:"Satoshi";font-weight:900;font-size:1.05rem;white-space:nowrap;text-decoration:none}
 .logo .m{width:30px;height:30px;border-radius:9px;background:var(--grad);box-shadow:0 0 18px var(--primary-glow);flex:none;display:grid;place-items:center;color:#fff}
@@ -288,3 +289,6 @@ td.name{font-weight:600}.uid{font-family:"JetBrains Mono";font-size:.8rem;color:
 @keyframes beat{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 60%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
 .livebar{display:inline-flex;align-items:center;gap:9px;font-size:.82rem;color:var(--fg-soft);background:var(--panel);border:1px solid var(--line);border-radius:100px;padding:7px 15px;margin-bottom:20px}
 .livebar .ln-dot{margin-top:0}
+
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
