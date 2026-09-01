@@ -1,0 +1,497 @@
+<title>NIAT Records Platform</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  /* ============ TOKENS — dark-first data-platform ============ */
+  :root{
+    --ink:#0a0e1a; --panel:#111726; --panel-2:#0d1320; --line:#1e2740;
+    --fg:#e8ecf6; --fg-soft:#9aa6c4; --fg-mute:#66738f;
+    --primary:#3b82f6; --primary-deep:#1e40af; --primary-soft:#1d2b52;
+    --accent:#f59e0b; --accent-deep:#d97706;
+    --good:#22c55e; --good-soft:#0f2e1c; --warn:#f59e0b; --bad:#ef4444; --bad-soft:#2e1113;
+    --grad: linear-gradient(135deg,#3b82f6,#8b5cf6 55%,#f59e0b);
+    --grid: rgba(80,110,180,.08);
+    --shadow: 0 24px 60px -20px rgba(0,0,0,.6);
+    --radius:16px;
+    --maxw:1120px;
+  }
+  /* light theme: only when explicitly chosen */
+  :root[data-theme="light"]{
+    --ink:#f6f8fd; --panel:#ffffff; --panel-2:#eef2fb; --line:#dde5f4;
+    --fg:#0f1830; --fg-soft:#41506f; --fg-mute:#7688a8;
+    --primary:#1e40af; --primary-deep:#1e3a8a; --primary-soft:#dbeafe;
+    --accent:#b45309; --accent-deep:#92400e;
+    --good:#15803d; --good-soft:#dcfce7; --warn:#b45309; --bad:#b91c1c; --bad-soft:#fee2e2;
+    --grid: rgba(30,64,175,.06);
+    --shadow: 0 24px 50px -24px rgba(30,50,110,.28);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{
+    margin:0; background:var(--ink); color:var(--fg);
+    font-family:"Manrope",system-ui,sans-serif; line-height:1.6;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  /* ambient grid + glow */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:44px 44px; mask-image:radial-gradient(circle at 50% 0%,#000,transparent 78%);
+  }
+  body::after{
+    content:""; position:fixed; top:-20%; left:50%; transform:translateX(-50%);
+    width:min(1200px,120vw); height:620px; z-index:-2; pointer-events:none;
+    background:radial-gradient(50% 60% at 50% 40%,rgba(59,130,246,.22),transparent 70%),
+               radial-gradient(40% 50% at 70% 30%,rgba(245,158,11,.12),transparent 70%);
+    filter:blur(20px);
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+  a{color:inherit}
+  h1,h2,h3{font-family:"Archivo",sans-serif; text-wrap:balance; margin:0; letter-spacing:-.02em}
+  .mono{font-family:"JetBrains Mono",monospace}
+
+  /* ============ NAV ============ */
+  header{position:sticky; top:0; z-index:50; backdrop-filter:blur(12px);
+    background:color-mix(in srgb,var(--ink) 72%,transparent); border-bottom:1px solid var(--line)}
+  .nav{display:flex; align-items:center; gap:18px; height:62px}
+  .brand{display:flex; align-items:center; gap:11px; font-family:"Archivo"; font-weight:800; letter-spacing:-.02em}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:var(--grad);box-shadow:0 0 18px rgba(59,130,246,.6)}
+  .nav .links{display:flex; gap:22px; margin-left:auto; font-size:.9rem; color:var(--fg-soft)}
+  .nav .links a{text-decoration:none; transition:color .2s}
+  .nav .links a:hover{color:var(--fg)}
+  @media(max-width:820px){.nav .links{display:none}}
+  .toggle{margin-left:16px; border:1px solid var(--line); background:var(--panel); color:var(--fg-soft);
+    width:38px;height:34px;border-radius:9px; cursor:pointer; font-size:1rem; transition:.2s}
+  .toggle:hover{color:var(--fg); border-color:var(--primary)}
+  .nav .links{margin-left:auto}
+
+  /* ============ HERO ============ */
+  .hero{padding:74px 0 34px; text-align:center; position:relative}
+  .eyebrow{display:inline-flex; align-items:center; gap:9px; font-family:"JetBrains Mono"; font-size:.74rem;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--accent);
+    border:1px solid var(--line); background:var(--panel); padding:7px 14px; border-radius:100px}
+  .eyebrow .pulse{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:ring 2.4s infinite}
+  @keyframes ring{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 9px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+  .hero h1{font-size:clamp(2.3rem,6vw,4.3rem); font-weight:900; line-height:1.02; margin:22px auto 0; max-width:15ch}
+  .hero h1 .g{background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero p.sub{max-width:60ch; margin:20px auto 0; color:var(--fg-soft); font-size:1.08rem}
+  .hero .cta{display:flex; gap:12px; justify-content:center; margin-top:30px; flex-wrap:wrap}
+  .btn{font-family:"Archivo"; font-weight:700; font-size:.92rem; padding:12px 22px; border-radius:11px; cursor:pointer;
+    text-decoration:none; display:inline-flex; align-items:center; gap:9px; border:1px solid transparent; transition:transform .15s,box-shadow .2s}
+  .btn.p{background:var(--primary); color:#fff; box-shadow:0 8px 24px -8px var(--primary)}
+  .btn.p:hover{transform:translateY(-2px); box-shadow:0 14px 30px -8px var(--primary)}
+  .btn.s{background:var(--panel); color:var(--fg); border-color:var(--line)}
+  .btn.s:hover{border-color:var(--primary); transform:translateY(-2px)}
+
+  /* stat ribbon */
+  .ribbon{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:44px 0 8px}
+  @media(max-width:720px){.ribbon{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line);
+    border-radius:14px; padding:18px 16px; text-align:left; position:relative; overflow:hidden}
+  .stat .k{font-family:"Archivo"; font-weight:900; font-size:1.9rem; letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .stat .l{font-size:.82rem; color:var(--fg-soft); margin-top:2px}
+  .stat::after{content:""; position:absolute; right:-30px; top:-30px; width:90px; height:90px; border-radius:50%;
+    background:radial-gradient(circle,rgba(59,130,246,.18),transparent 70%)}
+
+  /* ============ SECTION SCAFFOLD ============ */
+  section{padding:64px 0; position:relative}
+  .kicker{font-family:"JetBrains Mono"; font-size:.75rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent)}
+  .h2{font-size:clamp(1.7rem,4vw,2.6rem); font-weight:800; margin:12px 0 10px; max-width:20ch}
+  .lead{color:var(--fg-soft); max-width:64ch; font-size:1.03rem}
+  .reveal{opacity:0; transform:translateY(26px); transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1)}
+  .reveal.in{opacity:1; transform:none}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+  /* ============ PIPELINE DIAGRAM ============ */
+  .pipe{margin-top:34px; border:1px solid var(--line); border-radius:var(--radius); background:
+    linear-gradient(180deg,var(--panel),var(--panel-2)); padding:26px; box-shadow:var(--shadow); overflow-x:auto}
+  .flow{display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); gap:0; align-items:stretch; min-width:820px}
+  .node{position:relative; background:var(--panel-2); border:1px solid var(--line); border-radius:13px; padding:16px 15px; margin:0 12px}
+  .node .tag{font-family:"JetBrains Mono"; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; color:var(--fg-mute)}
+  .node h4{font-family:"Archivo"; font-weight:800; font-size:.98rem; margin:5px 0 6px}
+  .node p{font-size:.8rem; color:var(--fg-soft); margin:0}
+  .node .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;margin-bottom:8px;
+    background:var(--primary-soft); color:var(--primary); border:1px solid var(--line)}
+  .node.hot .ic{background:linear-gradient(135deg,var(--accent),var(--accent-deep)); color:#111}
+  .conn{position:relative}
+  .conn::after{content:"→"; position:absolute; right:-4px; top:50%; transform:translateY(-50%);
+    color:var(--fg-mute); font-size:1.1rem; z-index:2}
+  .latency{display:flex; gap:8px; align-items:center; justify-content:center; margin-top:20px; flex-wrap:wrap;
+    font-family:"JetBrains Mono"; font-size:.78rem; color:var(--fg-soft)}
+  .latency b{color:var(--good)}
+  .chip{border:1px solid var(--line); background:var(--panel-2); border-radius:100px; padding:4px 12px}
+
+  /* animated data packet */
+  .track{position:relative; height:3px; background:var(--line); border-radius:3px; margin:22px 12px 4px; overflow:hidden}
+  .track i{position:absolute; top:-2px; left:0; width:60px; height:7px; border-radius:7px;
+    background:linear-gradient(90deg,transparent,var(--primary),var(--accent),transparent); filter:blur(.3px);
+    animation:zoom 3.4s linear infinite}
+  @keyframes zoom{from{left:-70px}to{left:100%}}
+  @media (prefers-reduced-motion:reduce){.track i{animation:none; left:0; width:100%; opacity:.5}}
+
+  /* ============ GRID CARDS ============ */
+  .grid{display:grid; gap:16px; margin-top:30px}
+  .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:900px){.g3,.g4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:620px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line);
+    border-radius:14px; padding:20px; transition:transform .2s,border-color .2s; position:relative; overflow:hidden}
+  .card:hover{transform:translateY(-4px); border-color:color-mix(in srgb,var(--primary) 50%,var(--line))}
+  .card .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;margin-bottom:12px;
+    background:var(--primary-soft); color:var(--primary); font-family:"JetBrains Mono"; font-weight:600}
+  .card h3{font-size:1.06rem; font-weight:700; margin-bottom:6px}
+  .card p{font-size:.9rem; color:var(--fg-soft); margin:0}
+  .card .why{margin-top:10px; font-size:.8rem; color:var(--accent); font-family:"JetBrains Mono",monospace}
+
+  /* stack table */
+  .stackrow{display:grid; grid-template-columns:160px 1fr; gap:16px; padding:16px 0; border-bottom:1px solid var(--line); align-items:start}
+  .stackrow:last-child{border-bottom:none}
+  .stackrow .layer{font-family:"Archivo"; font-weight:800; font-size:.95rem}
+  .stackrow .layer span{display:block; font-family:"JetBrains Mono"; font-weight:500; font-size:.72rem; color:var(--fg-mute); margin-top:3px}
+  .stackrow .body{color:var(--fg-soft); font-size:.92rem}
+  .tags{display:flex; gap:7px; flex-wrap:wrap; margin-top:9px}
+  .tag2{font-family:"JetBrains Mono"; font-size:.72rem; padding:4px 10px; border-radius:7px; background:var(--panel-2);
+    border:1px solid var(--line); color:var(--fg)}
+  @media(max-width:620px){.stackrow{grid-template-columns:1fr; gap:6px}}
+
+  /* schema / code */
+  .code{background:#070b14; border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-top:22px}
+  :root[data-theme="light"] .code{background:#0b1428}
+  .code .bar{display:flex; gap:7px; padding:11px 14px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.02)}
+  .code .bar i{width:11px;height:11px;border-radius:50%;background:#33405f}
+  .code .bar .fn{margin-left:10px; font-family:"JetBrains Mono"; font-size:.76rem; color:var(--fg-mute)}
+  .code pre{margin:0; padding:18px 18px; overflow-x:auto; font-family:"JetBrains Mono"; font-size:.8rem; line-height:1.7; color:#c9d5f0}
+  .code .kw{color:#f59e0b} .code .ty{color:#3b82f6} .code .cm{color:#5b6785} .code .st{color:#22c55e} .code .fk{color:#a78bfa}
+
+  /* edge cases */
+  .edge{display:flex; gap:13px; padding:15px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2)}
+  .edge .n{flex:none; width:30px;height:30px;border-radius:8px; display:grid; place-items:center; font-family:"JetBrains Mono";
+    font-weight:600; font-size:.8rem; background:var(--bad-soft); color:var(--bad); border:1px solid var(--line)}
+  .edge h4{font-size:.92rem; font-weight:700; margin:0 0 3px} .edge p{font-size:.82rem; color:var(--fg-soft); margin:0}
+  .edge .fix{color:var(--good)}
+
+  /* roadmap */
+  .road{position:relative; margin-top:30px; padding-left:26px}
+  .road::before{content:""; position:absolute; left:6px; top:6px; bottom:6px; width:2px; background:linear-gradient(var(--primary),var(--accent))}
+  .phase{position:relative; padding:0 0 26px 22px}
+  .phase::before{content:""; position:absolute; left:-26px; top:4px; width:14px;height:14px;border-radius:50%;
+    background:var(--ink); border:3px solid var(--primary); box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 20%,transparent)}
+  .phase h4{font-family:"Archivo"; font-weight:800; font-size:1.02rem; display:flex; gap:10px; align-items:center}
+  .phase .wk{font-family:"JetBrains Mono"; font-size:.7rem; color:var(--accent); border:1px solid var(--line); padding:2px 9px; border-radius:100px}
+  .phase p{color:var(--fg-soft); font-size:.9rem; margin:6px 0 0}
+
+  footer{border-top:1px solid var(--line); padding:34px 0 60px; color:var(--fg-mute); font-size:.85rem; text-align:center}
+  .note{font-size:.8rem; color:var(--fg-mute); font-family:"JetBrains Mono"; margin-top:8px}
+  ::selection{background:var(--primary); color:#fff}
+</style>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand"><span class="dot"></span> NIAT&nbsp;Records</div>
+    <nav class="links">
+      <a href="#flow">Data Flow</a><a href="#stack">Stack</a><a href="#schema">Schema</a>
+      <a href="#realtime">Real-time</a><a href="#scale">Scale</a><a href="#edge">Edge Cases</a><a href="#road">Roadmap</a>
+    </nav>
+    <button class="toggle" id="tg" aria-label="Toggle theme">◐</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <span class="eyebrow"><span class="pulse"></span> Live system design · v1</span>
+    <h1>One sheet edit.<br><span class="g">The dashboard already knows.</span></h1>
+    <p class="sub">A production blueprint for turning your ops team's Google Sheets into a real-time,
+      pin-to-pin student records platform for every NIAT-collaborated college — built on Supabase, Vercel &amp; Railway.</p>
+    <div class="cta">
+      <a class="btn p" href="#flow">See the data flow ↓</a>
+      <a class="btn s" href="#schema">Jump to schema</a>
+    </div>
+
+    <div class="ribbon">
+      <div class="stat"><div class="k" data-count="19">0</div><div class="l">Collaborated colleges (live tabs)</div></div>
+      <div class="stat"><div class="k" data-count="8">0</div><div class="l">Subjects × 4 metrics per student</div></div>
+      <div class="stat"><div class="k" data-count="2000">0</div><div class="l">Concurrent users targeted</div></div>
+      <div class="stat"><div class="k" data-suffix="s" data-count="60">0</div><div class="l">Max sync latency (poll interval)</div></div>
+    </div>
+    <p class="note">Source of truth today: “NIAT Batch 2025 Semester 1 Results — Central”. Designed to absorb every future semester &amp; batch in the same format.</p>
+  </section>
+
+  <!-- FLOW -->
+  <section id="flow" class="wrap">
+    <div class="reveal">
+      <div class="kicker">01 · The core idea</div>
+      <h2 class="h2">Sheets stay the workspace. Postgres becomes the truth.</h2>
+      <p class="lead">Your ops team keeps doing exactly what they do — editing Google Sheets. Every change is
+        pushed into Supabase within seconds, normalized, and streamed to every open dashboard. No one re-enters data anywhere.</p>
+    </div>
+
+    <div class="pipe reveal">
+      <div class="flow">
+        <div class="node conn">
+          <div class="ic">▤</div><div class="tag">Source</div>
+          <h4>Google Sheets</h4><p>Ops edits per-college tabs. 1 file = 1 batch·semester.</p>
+        </div>
+        <div class="node conn hot">
+          <div class="ic">◎</div><div class="tag">Discover</div>
+          <h4>Cron · Drive</h4><p>Every 60s: finds shared sheets, skips unchanged via modifiedTime.</p>
+        </div>
+        <div class="node conn">
+          <div class="ic">⚙</div><div class="tag">Ingest</div>
+          <h4>Sync Worker</h4><p>Railway service: parse → diff → validate → upsert.</p>
+        </div>
+        <div class="node conn">
+          <div class="ic">◈</div><div class="tag">Store</div>
+          <h4>Supabase</h4><p>Postgres schema + RLS. Emits realtime change events.</p>
+        </div>
+        <div class="node">
+          <div class="ic">◐</div><div class="tag">Client</div>
+          <h4>Next.js UI</h4><p>Subscribed rows update live. No refresh, no delay.</p>
+        </div>
+      </div>
+      <div class="track"><i></i></div>
+      <div class="latency">
+        <span class="chip">poll cadence <b>60s</b></span>
+        <span class="chip">changed sheet <b>1 batched read</b></span>
+        <span class="chip">upsert (changed rows only) <b>~0.5s</b></span>
+        <span class="chip">realtime → UI <b>&lt;300ms</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- STACK -->
+  <section id="stack" class="wrap">
+    <div class="reveal">
+      <div class="kicker">02 · Tech stack &amp; why</div>
+      <h2 class="h2">Every choice earns its place — and uses what you already pay for.</h2>
+      <p class="lead">Supabase Pro, Vercel and Railway map cleanly onto the three jobs this system has:
+        serve the app fast, run the sync reliably, and stream truth in real time.</p>
+    </div>
+    <div class="reveal" style="margin-top:26px">
+      <div class="stackrow"><div class="layer">Frontend<span>the dashboard</span></div>
+        <div class="body">Next.js (App Router) + TypeScript on <b>Vercel</b>. Server Components for fast first paint of
+          college lists; client components subscribe to Supabase Realtime for live rows. TanStack Query for cache + optimistic reads.
+          <div class="tags"><span class="tag2">Next.js 15</span><span class="tag2">React 19</span><span class="tag2">Tailwind</span><span class="tag2">Framer Motion</span><span class="tag2">Recharts</span></div></div></div>
+      <div class="stackrow"><div class="layer">Database<span>source of truth</span></div>
+        <div class="body">Supabase <b>Postgres</b> (Pro). Normalized results, row-level security, Supavisor pooling,
+          materialized summaries for instant dashboards, and pg_cron for the reconciliation backstop.
+          <div class="tags"><span class="tag2">Postgres 15</span><span class="tag2">RLS</span><span class="tag2">Supavisor</span><span class="tag2">pg_cron</span></div></div></div>
+      <div class="stackrow"><div class="layer">Real-time<span>the “no delay”</span></div>
+        <div class="body">Supabase <b>Realtime</b> broadcasts Postgres changes over WebSockets. The UI subscribes per-college,
+          so a college view only receives its own updates — keeping fan-out tiny at 2k users.
+          <div class="tags"><span class="tag2">Realtime</span><span class="tag2">WebSocket</span><span class="tag2">Postgres CDC</span></div></div></div>
+      <div class="stackrow"><div class="layer">Sync worker<span>ingestion</span></div>
+        <div class="body">A long-running Node worker on <b>Railway</b> (no serverless timeout). Every 60s it discovers shared
+          sheets via the Drive API, skips unchanged ones by <span class="mono">modifiedTime</span>, batch-reads changed sheets, diffs by row-hash,
+          and upserts only what changed. New sheets self-register; tabs auto-map to colleges.
+          <div class="tags"><span class="tag2">Node worker</span><span class="tag2">Sheets API v4</span><span class="tag2">Drive API</span><span class="tag2">node-cron</span></div></div></div>
+      <div class="stackrow"><div class="layer">Onboarding<span>new semesters</span></div>
+        <div class="body">Zero-touch: <b>share a new sheet with the service account</b> and the worker discovers, registers,
+          and syncs it within 60s. An optional Apps Script (<span class="mono">onChange</span> → HMAC webhook) can drop latency to ~3s if ever needed.
+          <div class="tags"><span class="tag2">Auto-discovery</span><span class="tag2">Title match</span><span class="tag2">Apps Script (optional)</span></div></div></div>
+      <div class="stackrow"><div class="layer">Auth &amp; access<span>1–2k users</span></div>
+        <div class="body">Supabase <b>Auth</b> with Google SSO restricted to <span class="mono">@nxtwave</span> domains. Roles —
+          super-admin, ops, college-viewer (scoped to their college), and a future student self-view — all enforced by RLS.
+          <div class="tags"><span class="tag2">Google SSO</span><span class="tag2">Role-based</span><span class="tag2">RLS policies</span></div></div></div>
+    </div>
+  </section>
+
+  <!-- SCHEMA -->
+  <section id="schema" class="wrap">
+    <div class="reveal">
+      <div class="kicker">03 · Data model</div>
+      <h2 class="h2">Your wide sheet, flattened into a schema that scales.</h2>
+      <p class="lead">Subject counts and column layouts differ across colleges (some have “Name”, others “BITS ID”; Aurora even splits into
+        Term-I / Term-II). So results are stored <b>one row per student-per-subject</b> — flexible, queryable, and future-proof for new semesters.</p>
+    </div>
+
+    <div class="grid g4 reveal" style="margin-top:24px">
+      <div class="card"><div class="ic">C</div><h3>colleges</h3><p>Registry of real tabs. Junk/template tabs never enter here.</p></div>
+      <div class="card"><div class="ic">S</div><h3>semesters</h3><p>One per batch·semester spreadsheet. Aurora terms live here.</p></div>
+      <div class="card"><div class="ic">👤</div><h3>students</h3><p>Keyed by UID — persists across every semester.</p></div>
+      <div class="card"><div class="ic">Σ</div><h3>results</h3><p>Per subject: internal, external, total, pass/fail.</p></div>
+    </div>
+
+    <div class="code reveal">
+      <div class="bar"><i></i><i></i><i></i><span class="fn mono">supabase/migrations/0001_core.sql</span></div>
+<pre><span class="cm">-- A student is stable across semesters; identity keyed by NIAT UID</span>
+<span class="kw">create table</span> <span class="ty">students</span> (
+  id            <span class="ty">uuid</span> primary key default gen_random_uuid(),
+  uid           <span class="ty">text</span> <span class="kw">unique not null</span>,      <span class="cm">-- N25H02B0198</span>
+  full_name     <span class="ty">text</span>,
+  university_id  <span class="ty">text</span>,                    <span class="cm">-- 2025EB01894 (dirty-ID normalized)</span>
+  bits_id       <span class="ty">text</span>,
+  college_id    <span class="ty">uuid</span> <span class="fk">references colleges(id)</span>,
+  status        <span class="ty">text</span> default <span class="st">'active'</span>,     <span class="cm">-- active | flagged | withdrawn</span>
+  created_at    <span class="ty">timestamptz</span> default now()
+);
+
+<span class="cm">-- Subjects vary per college & semester → positional + named</span>
+<span class="kw">create table</span> <span class="ty">subjects</span> (
+  id           <span class="ty">uuid</span> primary key default gen_random_uuid(),
+  semester_id  <span class="ty">uuid</span> <span class="fk">references semesters(id)</span>,
+  college_id   <span class="ty">uuid</span> <span class="fk">references colleges(id)</span>,
+  position     <span class="ty">int</span>,                     <span class="cm">-- 1..8 (sheet column group)</span>
+  name         <span class="ty">text</span>,
+  <span class="kw">unique</span> (semester_id, college_id, position)
+);
+
+<span class="cm">-- The heart: one row per student per subject. Nulls = not yet entered</span>
+<span class="kw">create table</span> <span class="ty">results</span> (
+  id           <span class="ty">uuid</span> primary key default gen_random_uuid(),
+  student_id   <span class="ty">uuid</span> <span class="fk">references students(id)</span>,
+  semester_id  <span class="ty">uuid</span> <span class="fk">references semesters(id)</span>,
+  subject_id   <span class="ty">uuid</span> <span class="fk">references subjects(id)</span>,
+  internal_pct <span class="ty">numeric(5,2)</span>,
+  external_pct <span class="ty">numeric(5,2)</span>,
+  total_pct    <span class="ty">numeric(5,2)</span>,
+  passed       <span class="ty">boolean</span>,                 <span class="cm">-- normalized from Pass/Fail/P/F/blank</span>
+  <span class="kw">unique</span> (student_id, semester_id, subject_id)
+);
+
+<span class="cm">-- Denormalized per-student summary → dashboards read ONE fast row</span>
+<span class="kw">create table</span> <span class="ty">result_summaries</span> (
+  student_id      <span class="ty">uuid</span> <span class="fk">references students(id)</span>,
+  semester_id     <span class="ty">uuid</span> <span class="fk">references semesters(id)</span>,
+  total_cgpa      <span class="ty">numeric(4,2)</span>,        <span class="cm">-- 7.94</span>
+  total_pct       <span class="ty">numeric(5,2)</span>,
+  subjects_failed <span class="ty">int</span>,
+  overall_passed  <span class="ty">boolean</span>,
+  data_complete   <span class="ty">boolean</span>,             <span class="cm">-- false when subjects still blank</span>
+  primary key (student_id, semester_id)
+);
+
+<span class="cm">-- Audit + change-detection: every raw sheet row hashed for diffing</span>
+<span class="kw">create table</span> <span class="ty">sync_rows</span> (
+  semester_id <span class="ty">uuid</span>, college_id <span class="ty">uuid</span>, uid <span class="ty">text</span>,
+  row_hash <span class="ty">text</span>, raw <span class="ty">jsonb</span>, deleted_at <span class="ty">timestamptz</span>,
+  primary key (semester_id, college_id, uid)
+);</pre>
+    </div>
+    <p class="note">Indexes on <span class="mono">results(student_id)</span>, <span class="mono">results(semester_id, subject_id, passed)</span>,
+      and <span class="mono">students(college_id)</span> keep “who failed subject X” queries instant even at full scale.</p>
+  </section>
+
+  <!-- REALTIME -->
+  <section id="realtime" class="wrap">
+    <div class="reveal">
+      <div class="kicker">04 · The sync engine — cron-only &amp; fully dynamic</div>
+      <h2 class="h2">Share a sheet. It shows up. No setup, ever.</h2>
+      <p class="lead">One loop, every 60 seconds, does everything — discovery, change-detection, and sync — so onboarding a new
+        semester means simply sharing its spreadsheet with the service account. Nothing else to configure per sheet.</p>
+    </div>
+    <div class="grid g3 reveal" style="margin-top:24px">
+      <div class="card">
+        <div class="ic" style="background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#111">1</div>
+        <h3>Discover</h3>
+        <p>Lists spreadsheets shared with the service account whose title matches <span class="mono">Batch YYYY · Semester N</span>,
+          and auto-registers new ones — tabs matched to colleges automatically.</p>
+        <p class="why mono">→ New semester = one share action.</p>
+      </div>
+      <div class="card">
+        <div class="ic">2</div>
+        <h3>Skip unchanged</h3>
+        <p>Compares each file’s Drive <span class="mono">modifiedTime</span> to the last one seen. Untouched sheets are skipped
+          with a single cheap metadata call — no wasted reads, quota-safe at scale.</p>
+        <p class="why mono">→ Idle sheets cost almost nothing.</p>
+      </div>
+      <div class="card">
+        <div class="ic">3</div>
+        <h3>Sync changed</h3>
+        <p>Reads all tabs of a changed sheet in <b>one</b> batched call, diffs by row-hash, upserts only changed rows.
+          Supabase Realtime streams them to open dashboards.</p>
+        <p class="why mono">→ ≤ ~60s edit-to-screen.</p>
+      </div>
+    </div>
+    <div class="grid g3 reveal" style="margin-top:16px">
+      <div class="card"><h3>Updates</h3><p>Changed row-hash → upsert → the exact cells change on screen, in place, highlighted.</p></div>
+      <div class="card"><h3>Deletes</h3><p>Row vanishes from the sheet → absent in diff → soft-deleted (<span class="mono">deleted_at</span>) → removed from UI, kept for audit.</p></div>
+      <div class="card"><h3>New rows / colleges</h3><p>New UID → inserted. A brand-new tab is auto-registered as “pending” and ops is notified before it goes live.</p></div>
+    </div>
+  </section>
+
+  <!-- SCALE -->
+  <section id="scale" class="wrap">
+    <div class="reveal">
+      <div class="kicker">05 · Scaling to 1–2k users</div>
+      <h2 class="h2">Reads are cheap. We keep them that way.</h2>
+    </div>
+    <div class="grid g4 reveal" style="margin-top:24px">
+      <div class="card"><div class="ic">DB</div><h3>Pooled connections</h3><p>Supavisor pools thousands of clients onto a small Postgres pool — no connection exhaustion.</p></div>
+      <div class="card"><div class="ic">⚡</div><h3>Scoped realtime</h3><p>Each viewer subscribes only to their college’s rows, so 2k users ≠ 2k× fan-out.</p></div>
+      <div class="card"><div class="ic">▦</div><h3>Materialized summaries</h3><p>The dashboard reads one summary row per student, not eight joins.</p></div>
+      <div class="card"><div class="ic">◐</div><h3>Edge cache</h3><p>College lists + static shells cached on Vercel’s CDN; only live rows hit the DB.</p></div>
+      <div class="card"><div class="ic">API</div><h3>Quota-safe sync</h3><p>Only dirty tabs are read; hashing skips no-op writes → far under Sheets API limits.</p></div>
+      <div class="card"><div class="ic">Q</div><h3>Queued ingest</h3><p>BullMQ serializes bursts of edits so a busy results day never overwhelms writes.</p></div>
+      <div class="card"><div class="ic">▲</div><h3>Batch imports</h3><p>First-time backfill of a semester runs as a bulk COPY, not row-by-row.</p></div>
+      <div class="card"><div class="ic">🔒</div><h3>RLS at the row</h3><p>Access is enforced in the database, so scaling users never widens the blast radius.</p></div>
+    </div>
+  </section>
+
+  <!-- EDGE CASES -->
+  <section id="edge" class="wrap">
+    <div class="reveal">
+      <div class="kicker">06 · Edge cases — found in your real data</div>
+      <h2 class="h2">The messy reality, already handled.</h2>
+      <p class="lead">These aren’t hypotheticals — every one below is present in the current sheet. The pipeline treats data quality as a
+        first-class feature: normalize what’s safe, flag what isn’t, never silently corrupt.</p>
+    </div>
+    <div class="grid g2 reveal" style="margin-top:24px">
+      <div class="edge"><div class="n">1</div><div><h4>Junk &amp; template tabs</h4><p>Sheet10/11/12 and “{University_Copy this sheet…}” exist. <span class="fix">Fix: only tabs in the college registry are ingested.</span></p></div></div>
+      <div class="edge"><div class="n">2</div><div><h4>Dirty University IDs</h4><p><span class="mono">2025EBO1998</span> (letter O), <span class="mono">2025EB2034</span> (missing digit). <span class="fix">Fix: normalize + flag anomalies for ops review.</span></p></div></div>
+      <div class="edge"><div class="n">3</div><div><h4>Sparse rows</h4><p>Many students have only UID + CGPA; subjects blank. <span class="fix">Fix: partial results allowed, marked “in-progress”, not failed.</span></p></div></div>
+      <div class="edge"><div class="n">4</div><div><h4>Varying columns</h4><p>Some tabs use “Name”, others “BITS ID”. <span class="fix">Fix: per-college header mapping, auto-detected on ingest.</span></p></div></div>
+      <div class="edge"><div class="n">5</div><div><h4>Multi-term tabs</h4><p>Aurora has Term-I &amp; Term-II. <span class="fix">Fix: term modeled on the semester, one college → many term-sheets.</span></p></div></div>
+      <div class="edge"><div class="n">6</div><div><h4>Row reordering</h4><p>Ops sort the sheet constantly. <span class="fix">Fix: rows keyed by UID, never by position — reorders are no-ops.</span></p></div></div>
+      <div class="edge"><div class="n">7</div><div><h4>Renamed / deleted tabs</h4><p>A tab rename would orphan data. <span class="fix">Fix: track by stable college code; alert ops on rename, keep last-known data.</span></p></div></div>
+      <div class="edge"><div class="n">8</div><div><h4>Pass/Fail spelled many ways</h4><p>“Pass”, “P”, “Fail”, blank. <span class="fix">Fix: normalized to a strict boolean enum on write.</span></p></div></div>
+    </div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section id="road" class="wrap">
+    <div class="reveal">
+      <div class="kicker">07 · Delivery roadmap</div>
+      <h2 class="h2">From this blueprint to production.</h2>
+    </div>
+    <div class="road reveal">
+      <div class="phase"><h4>Foundation <span class="wk">Week 1</span></h4><p>Supabase schema + RLS, college registry seeded from the 19 live tabs, Next.js app shell deployed to Vercel.</p></div>
+      <div class="phase"><h4>Ingestion <span class="wk">Week 1–2</span></h4><p>Railway sync worker: Sheets API reader, header-mapping, row-hash diffing, validation + anomaly flags, first full backfill.</p></div>
+      <div class="phase"><h4>Real-time <span class="wk">Week 2</span></h4><p>Apps Script onChange bridge + HMAC webhook, Realtime subscriptions, 60s reconciliation cron. Edit-to-screen proven end-to-end.</p></div>
+      <div class="phase"><h4>The dashboard <span class="wk">Week 2–3</span></h4><p>Colleges grid → college view → student drill-down: subject-wise backlogs, pass/fail, CGPA, filters, search, exports.</p></div>
+      <div class="phase"><h4>Hardening &amp; scale <span class="wk">Week 3–4</span></h4><p>Auth roles, load test to 2k, monitoring &amp; sync-health alerts, ops anomaly console. Ready for the next semester’s sheet — drop it in, it flows.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  Blueprint for the NIAT collaborated-colleges records platform · Google Sheets → Supabase → live dashboard.<br>
+  <span class="note">Assumptions to confirm: user population &amp; roles (ops-only vs colleges vs students), and whether historical semesters get backfilled at launch.</span>
+</footer>
+
+<script>
+  // theme toggle (persisted, no-flash handled by data-theme)
+  const tg=document.getElementById('tg');
+  const cur=()=>document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  try{const s=localStorage.getItem('niat-theme'); if(s)document.documentElement.setAttribute('data-theme',s);}catch(e){}
+  tg.addEventListener('click',()=>{const n=cur()==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('niat-theme',n)}catch(e){}});
+
+  // scroll reveal
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // count-up
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cs=new IntersectionObserver(es=>es.forEach(e=>{
+    if(!e.isIntersecting)return; const el=e.target; cs.unobserve(el);
+    const to=+el.dataset.count, sfx=el.dataset.suffix||''; if(reduce){el.textContent=to.toLocaleString()+sfx;return;}
+    let t0=null; const dur=1300;
+    const step=ts=>{t0=t0||ts; const p=Math.min((ts-t0)/dur,1); const v=Math.round((1-Math.pow(1-p,3))*to);
+      el.textContent=v.toLocaleString()+sfx; if(p<1)requestAnimationFrame(step);};
+    requestAnimationFrame(step);
+  }),{threshold:.5});
+  document.querySelectorAll('[data-count]').forEach(el=>cs.observe(el));
+</script>
