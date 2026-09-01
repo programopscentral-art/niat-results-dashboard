@@ -40,6 +40,7 @@ export default async function OverviewPage() {
         <p className="sub">
           {rows.length} college{rows.length === 1 ? '' : 's'} · {sem?.batch ?? '2025'} · {sem?.name ?? 'Semester 1'} — synced from Google Sheets in real time.
         </p>
+        <div className="livebar"><span className="ln-dot" /> Live · auto-syncs from Google Sheets every ~60&nbsp;seconds — enter data in the sheet and it appears here, no refresh needed.</div>
 
         <div className="kpis">
           <Kpi lab="Colleges" val={String(rows.length)} foot="live tabs tracked" />

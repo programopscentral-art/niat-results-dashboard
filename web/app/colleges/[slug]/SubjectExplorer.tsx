@@ -71,6 +71,12 @@ export function SubjectExplorer({ subjectStats }:
               <h3>{sel.name ?? `Subject ${sel.pos}`}{sel.term ? ` · ${sel.term}` : ''}</h3>
               <div className="sd-sub">{sel.total} students · {sel.pass} passed · {sel.fail} failed{sel.inprog ? ` · ${sel.inprog} in progress` : ''}</div>
             </div>
+            {sel.inprog > 0 && (
+              <div className="livenote">
+                <span className="ln-dot" />
+                <span><b>{sel.inprog} student{sel.inprog === 1 ? '' : 's'} awaiting this subject’s result.</b> These update <b>automatically within ~60&nbsp;seconds</b> the moment ops enters the marks in the sheet.</span>
+              </div>
+            )}
             <div className="toolbar">
               <div className="search" style={{ maxWidth: 300 }}>
                 <input placeholder="Search name or UID…" value={q} onChange={(e) => setQ(e.target.value)} />

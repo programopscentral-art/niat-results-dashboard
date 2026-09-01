@@ -104,6 +104,13 @@ export function StudentsClient({
         <div className="kpi"><div className="lab">Open backlogs</div><div className="val tnum">{counts.backlogs}</div><div className="foot">{counts.backlog} students have backlogs · {counts.failed} failed overall</div></div>
       </div>
 
+      {counts.inc > 0 && (
+        <div className="livenote">
+          <span className="ln-dot" />
+          <span><b>{counts.inc} student{counts.inc === 1 ? '' : 's'} awaiting results.</b> Empty cells show as “In progress” — the dashboard updates <b>automatically within ~60&nbsp;seconds</b> as ops enters the scores in the sheet. No refresh needed.</span>
+        </div>
+      )}
+
       <div className="toolbar">
         <div className="search" style={{ maxWidth: 320 }}>
           <input placeholder="Search name, UID, University ID…" value={q} onChange={(e) => setQ(e.target.value)} />
