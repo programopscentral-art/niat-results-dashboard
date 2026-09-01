@@ -30,8 +30,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-signature': signature },
       body,
-      // loading a whole semester can take a while
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(45_000),
     });
     const data = await res.json().catch(() => ({}));
     return NextResponse.json(data, { status: res.status });
