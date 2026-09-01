@@ -36,7 +36,10 @@ export function TopBar({ email, role, semesters, selectedId }:
   return (
     <header className="bar-wrap">
       <div className="bar">
-        <Link href="/" className="logo"><span className="m">◈</span><span className="tx">NIAT&nbsp;Records</span></Link>
+        <Link href="/" className="logo" aria-label="NIAT Records — home">
+          <img src="/niat-logo.png" alt="NIAT" className="logo-img" />
+          <span className="logo-sub">Records</span>
+        </Link>
         <SemesterSwitcher semesters={semesters} selectedId={selectedId} isOps={isOps} />
         <GlobalSearch />
         <div className="spacer" />

@@ -269,3 +269,14 @@ td.name{font-weight:600}.uid{font-family:"JetBrains Mono";font-size:.8rem;color:
 .gs-meta{font-size:.76rem;color:var(--fg-soft)}
 .gs-empty{padding:14px;color:var(--fg-mute);font-size:.85rem}
 @media(max-width:760px){.gsearch{display:none}}
+
+/* ============ NIAT logo (real file) ============ */
+.logo-img{height:28px;width:auto;display:block}
+.logo-sub{font-family:"Satoshi",sans-serif;font-weight:800;font-size:.8rem;color:var(--fg-mute);border-left:1px solid var(--line);padding-left:10px;letter-spacing:.02em}
+@media(max-width:680px){.logo-sub{display:none}.logo-img{height:26px}}
+:root[data-theme="dark"] .logo-img{filter:brightness(0) invert(1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-img{filter:brightness(0) invert(1)}}
+.login-logo{display:block;width:230px;max-width:78%;height:auto;margin:0 auto 18px}
+.foot-logo-img{height:30px;width:auto;display:block;background:#fff;padding:8px 12px;border-radius:10px}
+:root[data-theme="dark"] .login-logo{filter:brightness(0) invert(1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .login-logo{filter:brightness(0) invert(1)}}

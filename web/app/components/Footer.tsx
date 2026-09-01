@@ -4,7 +4,7 @@ export function Footer() {
     <footer className="site-footer">
       <div className="foot-inner">
         <div className="foot-brand">
-          <div className="foot-logo"><span className="fm">◈</span> NIAT&nbsp;Records</div>
+          <div className="foot-logo"><img src="/niat-logo.png" alt="NIAT" className="foot-logo-img" /></div>
           <p>Real-time student records for NIAT&apos;s collaborated universities. Google Sheets → live dashboard, synced every minute.</p>
           <div className="foot-badges">
             <span>NxtWave Institute of Advanced Technologies</span>

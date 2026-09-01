@@ -18,7 +18,7 @@ export default function LoginPage() {
   return (
     <div className="login">
       <div className="login-card">
-        <div className="m">◈</div>
+        <img src="/niat-logo.png" alt="NIAT — NxtWave of Innovation in Advanced Technologies" className="login-logo" />
         <h1>NIAT Records</h1>
         <p>Sign in with your NxtWave account to view collaborated-college student records.</p>
         <button className="gbtn" onClick={signIn}>
