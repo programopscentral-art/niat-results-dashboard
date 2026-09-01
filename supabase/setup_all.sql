@@ -1,9 +1,7 @@
 -- ============================================================================
 -- NIAT Records — COMPLETE Supabase setup (run once in the SQL Editor).
--- Combines: 0001_core, 0002_rls, 0003_realtime, 0004_views, seed.
--- Safe to re-run (idempotent).
+-- Includes migrations 0001-0009 + seed. Safe to re-run (idempotent).
 -- ============================================================================
-
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0001_core.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -91,9 +89,9 @@ create table if not exists results (
   student_id   uuid not null references students(id)  on delete cascade,
   semester_id  uuid not null references semesters(id) on delete cascade,
   subject_id   uuid not null references subjects(id)  on delete cascade,
-  internal_pct numeric(5,2),
-  external_pct numeric(5,2),
-  total_pct    numeric(5,2),
+  internal_pct numeric(8,2),
+  external_pct numeric(8,2),
+  total_pct    numeric(8,2),
   passed       boolean,                       -- null = not yet graded
   updated_at   timestamptz not null default now(),
   unique (student_id, semester_id, subject_id)
@@ -104,8 +102,8 @@ create table if not exists result_summaries (
   student_id      uuid not null references students(id)  on delete cascade,
   semester_id     uuid not null references semesters(id) on delete cascade,
   college_id      uuid references colleges(id) on delete set null,
-  total_cgpa      numeric(4,2),
-  total_pct       numeric(5,2),
+  total_cgpa      numeric(8,2),
+  total_pct       numeric(8,2),
   subjects_failed int,
   overall         overall_status not null default 'in_progress',
   data_complete   boolean not null default false,
@@ -321,6 +319,112 @@ where c.is_active
 group by c.id, c.name, c.slug, c.code, c.hue, rs.semester_id;
 
 grant select on v_college_overview to authenticated, anon;
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0005_admin_bootstrap.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+-- ============================================================================
+-- Admin bootstrap: emails listed here get the 'ops' role automatically on their
+-- first sign-in. Everyone else defaults to 'college_staff' (scope them later).
+-- ============================================================================
+
+create table if not exists admin_emails (email text primary key);
+
+insert into admin_emails (email) values
+  ('programopscentral@nxtwave.in'),
+  ('nalamasa.sanjay@nxtwave.co.in')
+on conflict (email) do nothing;
+
+-- Recreate the signup handler to honor the allowlist.
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  r app_role;
+begin
+  r := case when exists (select 1 from admin_emails a where a.email = new.email)
+            then 'ops'::app_role else 'college_staff'::app_role end;
+  insert into public.profiles (id, email, full_name, role)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', new.email), r)
+  on conflict (id) do update set role = excluded.role;
+  return new;
+end $$;
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0006_semester_modified.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+-- Track each spreadsheet's last-seen Drive modifiedTime so the cron can skip
+-- unchanged files instead of re-reading them every minute.
+alter table semesters add column if not exists last_modified_seen timestamptz;
+
+-- Let the auto-discovery cron store the human title it parsed (nice for ops UI).
+alter table semesters add column if not exists source_title text;
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0007_universal.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+-- ============================================================================
+-- Universal adapter: colleges grade differently (marks / CIA-ESE / grade-points
+-- / MID-based / Theory-IA). Store every subject's RAW metrics as JSONB, plus a
+-- normalized layer (score, grade, total_pct, passed) derived where possible.
+-- ============================================================================
+
+alter table results add column if not exists score   numeric(8,2);  -- headline number
+alter table results add column if not exists grade   text;          -- letter grade (A-, B+, ...)
+alter table results add column if not exists metrics jsonb;         -- all raw per-subject cells
+
+-- Remember each tab's detected shape (for the ops UI / debugging).
+alter table college_sheets add column if not exists format text;    -- 'marks' | 'cia_ese' | 'grade_points' | ...
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0008_subjects_per_sheet.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+-- ============================================================================
+-- Subjects are keyed per TAB (college_sheet), not per (semester, college).
+-- This lets one college have multiple term-tabs (e.g. Aurora Term-I / Term-II)
+-- with their own subject sets in the same semester, without position collisions.
+-- ============================================================================
+
+alter table subjects add column if not exists college_sheet_id uuid references college_sheets(id) on delete cascade;
+alter table subjects drop constraint if exists subjects_semester_id_college_id_position_key;
+create unique index if not exists subjects_sheet_position_key on subjects(college_sheet_id, position);
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0009_subject_views.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+-- ============================================================================
+-- Subject-wise drill-down. security_invoker so RLS applies (ops = all,
+-- college_staff = own college). Counts + per-subject student lists.
+-- ============================================================================
+
+-- Per-subject pass / fail / in-progress counts for a college + semester.
+create or replace function subject_stats(p_semester uuid, p_college uuid)
+returns table (subject_id uuid, name text, pos int, term text, pass int, fail int, inprog int, total int)
+language sql stable security invoker set search_path = public as $$
+  select sub.id, sub.name, sub.position, cs.term,
+         count(*) filter (where r.passed) ::int,
+         count(*) filter (where r.passed = false) ::int,
+         count(*) filter (where r.passed is null) ::int,
+         count(*) ::int
+  from subjects sub
+  join college_sheets cs on cs.id = sub.college_sheet_id
+  left join results r on r.subject_id = sub.id
+  where sub.semester_id = p_semester and sub.college_id = p_college
+  group by sub.id, sub.name, sub.position, cs.term
+  order by cs.term nulls first, sub.position;
+$$;
+
+-- Students for one subject, ordered failed → in-progress → passed, then by name.
+create or replace function subject_students(p_subject uuid)
+returns table (uid text, full_name text, passed boolean, total_pct numeric, score numeric, grade text)
+language sql stable security invoker set search_path = public as $$
+  select st.uid, st.full_name, r.passed, r.total_pct, r.score, r.grade
+  from results r join students st on st.id = r.student_id
+  where r.subject_id = p_subject
+  order by (r.passed = false) desc, (r.passed is null) desc, st.full_name nulls last, st.uid;
+$$;
+
+grant execute on function subject_stats(uuid, uuid) to authenticated, anon;
+grant execute on function subject_students(uuid) to authenticated, anon;
 
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> seed.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

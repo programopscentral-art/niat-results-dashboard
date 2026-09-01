@@ -57,10 +57,9 @@ function AddSemesterModal({ onClose, onDone }: { onClose: () => void; onDone: ()
         {error && <div className="modal-err">⚠ {error}</div>}
         {result && (
           <div className="modal-ok">
-            <b>✓ {result.registered?.length ?? 0} college tab(s) loaded.</b>
-            {result.awaiting?.length ? <div className="mo-line">Awaiting results (no data yet): {result.awaiting.join(', ')}</div> : null}
-            {result.unmatchedTabs?.length ? <div className="mo-line warn">Unknown tabs (add these colleges first): {result.unmatchedTabs.join(', ')}</div> : null}
-            {result.problems?.length ? <div className="mo-line warn">Format issues: {result.problems.join('; ')}</div> : null}
+            <b>✓ {result.registered?.length ?? 0} college tab(s) registered{result.semester ? ` for ${result.semester}` : ''}.</b>
+            <div className="mo-line">Data is loading now — it appears in the dashboard within ~60 seconds. Pick it from the semester switcher.</div>
+            {result.unmatchedTabs?.length ? <div className="mo-line warn">Unknown tabs (add these colleges to the registry first): {result.unmatchedTabs.join(', ')}</div> : null}
           </div>
         )}
         <div className="modal-actions">

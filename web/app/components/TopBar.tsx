@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { SemesterSwitcher } from './SemesterSwitcher';
+import { GlobalSearch } from './GlobalSearch';
 import type { Semester } from '@/lib/semester';
 
 const THEMES = ['light', 'dark'] as const;
@@ -37,6 +38,7 @@ export function TopBar({ email, role, semesters, selectedId }:
       <div className="bar">
         <Link href="/" className="logo"><span className="m">◈</span><span className="tx">NIAT&nbsp;Records</span></Link>
         <SemesterSwitcher semesters={semesters} selectedId={selectedId} isOps={isOps} />
+        <GlobalSearch />
         <div className="spacer" />
         {role && <span className="pillrole" title={email}>{role === 'college_staff' ? 'College' : role.toUpperCase()}</span>}
         <div className="seg" role="group" aria-label="Theme">

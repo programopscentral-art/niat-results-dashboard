@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getSelectedSemester } from '@/lib/semester';
 import { grad, initials, cgpa } from '@/lib/format';
 import type { Subject, Result } from '@/lib/types';
+import { PrintButton } from './PrintButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,14 +23,22 @@ export default async function StudentPage({ params }: { params: Promise<{ uid: s
     .from('colleges').select('id, name, slug, code, hue').eq('id', student.college_id).maybeSingle();
   const sem = await getSelectedSemester();
 
-  const [{ data: subjects }, { data: results }, { data: summary }] = await Promise.all([
+  const [{ data: subjects }, { data: results }, { data: summary }, { data: allSummaries }] = await Promise.all([
     supabase.from('subjects').select('id, position, name')
       .eq('college_id', student.college_id).eq('semester_id', sem?.id ?? '').order('position'),
     supabase.from('results').select('subject_id, internal_pct, external_pct, total_pct, passed, score, grade, metrics')
       .eq('student_id', student.id).eq('semester_id', sem?.id ?? ''),
     supabase.from('result_summaries').select('total_cgpa, subjects_failed, overall, data_complete')
       .eq('student_id', student.id).eq('semester_id', sem?.id ?? '').maybeSingle(),
+    // Cross-semester journey: every semester this student has a record in.
+    supabase.from('result_summaries')
+      .select('semester_id, total_cgpa, subjects_failed, overall, semester:semesters(name, batch, created_at)')
+      .eq('student_id', student.id),
   ]);
+
+  const journey = ((allSummaries ?? []) as any[])
+    .filter((r) => r.semester)
+    .sort((a, b) => String(a.semester.created_at).localeCompare(String(b.semester.created_at)));
 
   const bySubject = new Map<string, Result>((results ?? []).map((r: any) => [r.subject_id, r]));
   const subs = (subjects ?? []) as Subject[];
@@ -47,6 +56,8 @@ export default async function StudentPage({ params }: { params: Promise<{ uid: s
           <Link href="/">Colleges</Link> / {college && <><Link href={`/colleges/${college.slug}`}>{college.name}</Link> / </>}
           <span>{student.full_name ?? student.uid}</span>
         </div>
+
+        <div className="st-toolbar no-print"><PrintButton /></div>
 
         <div className="st-head">
           <div className="avatar" style={{ background: grad(hue) }}>{initials(student.full_name ?? student.uid)}</div>
@@ -77,7 +88,37 @@ export default async function StudentPage({ params }: { params: Promise<{ uid: s
             <div><b>All subjects cleared.</b> No backlogs this semester — clean record.</div></div>
         )}
 
-        <div className="page-h"><h2 className="sec-h">Subject-wise performance</h2></div>
+        {journey.length >= 2 && (
+          <>
+            <div className="page-h"><h2 className="sec-h">Academic journey</h2></div>
+            <div className="timeline">
+              {journey.map((j: any, i: number) => {
+                const prev = i > 0 ? journey[i - 1] : null;
+                const cur = j.total_cgpa == null ? null : Number(j.total_cgpa);
+                const prv = prev?.total_cgpa == null ? null : Number(prev?.total_cgpa);
+                const trend = cur != null && prv != null ? (cur > prv ? 'up' : cur < prv ? 'down' : 'flat') : null;
+                const isSel = j.semester_id === sem?.id;
+                return (
+                  <div key={j.semester_id} className={`tl-node ${isSel ? 'sel' : ''}`}>
+                    <div className="tl-sem">{j.semester?.batch} · {j.semester?.name}</div>
+                    <div className="tl-cg">
+                      {cgpa(j.total_cgpa)}
+                      {trend && <span className={`tl-trend ${trend}`}>{trend === 'up' ? '▲' : trend === 'down' ? '▼' : '▬'}</span>}
+                    </div>
+                    <div className="tl-meta">
+                      {j.overall === 'pass' && <span className="pill pass"><span className="dot" />Passed</span>}
+                      {j.overall === 'fail' && <span className="pill fail"><span className="dot" />Failed</span>}
+                      {j.overall === 'in_progress' && <span className="pill inc"><span className="dot" />In progress</span>}
+                      <span className="tl-bk">{j.subjects_failed ?? 0} backlog{(j.subjects_failed ?? 0) === 1 ? '' : 's'}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <div className="page-h"><h2 className="sec-h">Subject-wise performance <span className="sec-sem">{sem?.batch} · {sem?.name}</span></h2></div>
         <div className="legend">
           <span style={{ color: 'var(--fg-mute)' }}>Each subject shows its recorded result and the exact breakdown from the sheet — marks, grades, or points as your college reports them.</span>
         </div>

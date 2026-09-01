@@ -72,18 +72,19 @@ app.post('/admin/register-semester', async (req, res) => {
     }
 
     const reg = await registerSemester({ spreadsheetId, batch, name });
-    const sem = await resolveSemesterBySpreadsheet(spreadsheetId);
-    const results = sem ? await syncSemester(sem, 'manual') : [];
 
-    const registered = results.filter((r) => r.processed > 0).map((r) => ({ tab: r.tab, students: r.processed }));
-    const awaiting = results.filter((r) => r.processed === 0).map((r) => r.tab);
-    const problems = results.flatMap((r) => r.warnings
-      .filter((w) => !/no data rows|has no data/i.test(w))
-      .map((w) => `${r.tab}: ${w}`));
+    // Load data in the BACKGROUND so the HTTP response stays fast (serverless-safe).
+    // The 60s reconciliation cron is the backstop if this misses.
+    resolveSemesterBySpreadsheet(spreadsheetId)
+      .then((sem) => (sem ? syncSemester(sem, 'manual') : null))
+      .catch((e) => console.error('[register] background backfill error', e));
 
     res.json({ ok: true, report: {
       semester: `${batch} · ${name}`,
-      registered, awaiting, unmatchedTabs: reg.unmatchedTabs, problems,
+      registered: reg.registered,        // [{ tab, college, term }]
+      unmatchedTabs: reg.unmatchedTabs,
+      ignored: reg.ignored,
+      loading: true,
     }});
   } catch (e: any) {
     res.status(500).json({ error: String(e?.message ?? e) });

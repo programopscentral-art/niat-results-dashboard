@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { downloadCsv } from '@/lib/csv';
 
 export interface SubjectStat {
   subject_id: string; name: string | null; pos: number; term: string | null;
@@ -80,6 +81,11 @@ export function SubjectExplorer({ subjectStats }:
                 <button className={`chip ${filter === 'inprog' ? 'on' : ''}`} onClick={() => setFilter('inprog')}>In progress<span className="c">{sel.inprog}</span></button>
                 <button className={`chip ${filter === 'pass' ? 'on' : ''}`} onClick={() => setFilter('pass')}>Passed<span className="c">{sel.pass}</span></button>
               </div>
+              <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => downloadCsv(
+                `${(sel.name ?? 'subject').replace(/[^a-z0-9]+/gi, '-')}-${filter}.csv`,
+                ['Student', 'UID', 'Result', 'Status'],
+                shown.map((r) => [r.full_name ?? '', r.uid, headline(r), r.passed === true ? 'Pass' : r.passed === false ? 'Fail' : 'In progress']),
+              )}>⭳ Export CSV</button>
             </div>
 
             <div className="tablewrap"><div className="tscroll">

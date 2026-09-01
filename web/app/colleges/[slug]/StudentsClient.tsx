@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { StudentRow, Summary } from '@/lib/types';
 import { cgpa, passRate } from '@/lib/format';
+import { downloadCsv } from '@/lib/csv';
 
 type Filter = 'all' | 'pass' | 'backlog' | 'fail' | 'inc';
 type Sort = 'name' | 'uid' | 'cgpa' | 'backlog';
@@ -114,6 +115,11 @@ export function StudentsClient({
           {chip('fail', 'Failed', counts.failed)}
           {chip('inc', 'In progress', counts.inc)}
         </div>
+        <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => downloadCsv(
+          `${slug}-students.csv`,
+          ['Name', 'UID', 'University ID', 'CGPA', 'Backlogs', 'Status'],
+          shown.map((r) => [r.full_name ?? '', r.uid, r.university_id ?? '', r.summary?.total_cgpa ?? '', r.summary?.subjects_failed ?? '', r.summary?.overall ?? 'in_progress']),
+        )}>⭳ Export CSV</button>
       </div>
 
       <div className="tablewrap"><div className="tscroll">
