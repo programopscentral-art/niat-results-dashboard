@@ -292,3 +292,14 @@ td.name{font-weight:600}.uid{font-family:"JetBrains Mono";font-size:.8rem;color:
 
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* ============ scroll performance: skip rendering off-screen content ============ */
+/* Only visible rows/cards are painted → smooth scroll on 1000+ row tables. */
+tbody tr{content-visibility:auto;contain-intrinsic-size:auto 47px}
+.col-card{content-visibility:auto;contain-intrinsic-size:auto 210px}
+.subj{content-visibility:auto;contain-intrinsic-size:auto 230px}
+.subjcard{content-visibility:auto;contain-intrinsic-size:auto 120px}
+.tl-node{content-visibility:auto;contain-intrinsic-size:auto 130px}
+/* Cheap GPU pulse (opacity) instead of animating box-shadow every frame. */
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.35}}
+.ln-dot,.foot-live i,.live .d{box-shadow:none!important;animation:beat 2s ease-in-out infinite}
