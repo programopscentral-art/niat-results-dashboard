@@ -262,7 +262,10 @@ export function parseTab(grid: string[][]): ParsedTab {
 
       let passed: boolean | null = passVals.length ? passVals.every((v) => v) : null;
       if (passed == null && grade) passed = !/^(f|ra|ab|fail|absent)$/i.test(grade);
-      if (passed == null && total != null) passed = total >= config.passMarkPct;
+      // Derive from total ONLY when there's a real score (>0). A 0/blank with no
+      // Pass/Fail and no grade = not graded / non-academic column (e.g. NCC, community
+      // service) → leave as null (in progress), never count it as a failed subject.
+      if (passed == null && total != null && total > 0) passed = total >= config.passMarkPct;
 
       const hasAny = Object.keys(metrics).length > 0;
       return { position: i + 1, name: g.name, metrics, internal, external, total, score, grade, passed: hasAny ? passed : null };
@@ -272,29 +275,28 @@ export function parseTab(grid: string[][]): ParsedTab {
     const anyGraded = graded.length > 0;
     const dataComplete = anyGraded && subjects.every((s) => Object.keys(s.metrics).length > 0);
 
-    const cgpa = cCgpa >= 0 ? num(cell(cCgpa)) : null;
+    let cgpa = cCgpa >= 0 ? num(cell(cCgpa)) : null;
     let subjectsFailed: number | null;
     let overall: ParsedStudent['overall'];
     const determinable = subjects.filter((s) => s.passed !== null);
     if (!anyGraded || determinable.length === 0) {
-      // has metrics but pass/fail can't be assessed → don't guess "fail"
+      // No graded subjects (empty cells) → results not entered yet → in progress.
       overall = 'in_progress'; subjectsFailed = null;
     } else {
-      subjectsFailed = cFailed >= 0 && num(cell(cFailed)) != null
-        ? num(cell(cFailed))!
-        : determinable.filter((s) => s.passed === false).length;
-      const ov = cOverall >= 0 ? passFail(cell(cOverall)) : null;
-      overall = (ov ?? subjectsFailed === 0) ? 'pass' : 'fail';
+      // TRUTH = the actual subject results. 0 failed subjects = PASS.
+      // The sheet's "Overall Pass/Fail", "No. of subjects failed" and "Total CGPA"
+      // summary columns are frequently stale/blank (e.g. CGPA 0 + Overall Fail while
+      // every subject shows PASS), so we DERIVE from subjects and ignore them.
+      subjectsFailed = determinable.filter((s) => s.passed === false).length;
+      overall = subjectsFailed === 0 ? 'pass' : 'fail';
     }
-    // Data-quality flags (surface source inconsistencies, don't hide them):
-    //  - UID column actually holds a name
-    //  - Overall = Fail but zero failed subjects (usually CGPA 0 / results withheld)
+    // A passing student with CGPA exactly 0 = CGPA not computed in the sheet yet → blank, not "0.00".
+    if (cgpa === 0 && overall === 'pass') cgpa = null;
+
+    // Only genuine data-quality flag left: the UID column holding a name.
     const suspiciousUid = /\s/.test(uid) && !/\d/.test(uid);
-    const failNoBacklog = overall === 'fail' && !(subjectsFailed && subjectsFailed > 0);
-    const flagged = suspiciousUid || failNoBacklog;
-    const flagReason = suspiciousUid ? 'UID column holds a name — verify source sheet'
-      : failNoBacklog ? `Overall marked Fail but no failed subjects${cgpa != null ? ` (CGPA ${cgpa})` : ''} — verify source`
-      : null;
+    const flagged = suspiciousUid;
+    const flagReason = suspiciousUid ? 'UID column holds a name — verify source sheet' : null;
 
     const raw: Record<string, string> = {};
     for (let c = 0; c < width; c++) { const k = fl(c) || gl(c); if (k) raw[k] = cell(c); }

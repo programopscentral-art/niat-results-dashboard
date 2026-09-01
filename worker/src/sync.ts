@@ -193,6 +193,8 @@ export async function syncSemester(sem: SemesterRow, trigger = 'cron'): Promise<
     try { out.push(await syncTabWithGrid(sem, sheet, grids.get(sheet.tab_name) ?? [], trigger)); }
     catch (e) { console.error(`[sync] ${sheet.tab_name} failed:`, e); }
   }
+  // Combine multi-tab colleges (e.g. Aurora terms) into one correct summary per student.
+  await supa.rpc('recompute_summaries', { p_semester: sem.id });
   return out;
 }
 

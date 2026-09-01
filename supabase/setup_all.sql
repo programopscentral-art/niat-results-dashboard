@@ -1,9 +1,6 @@
--- ============================================================================
--- NIAT Records — COMPLETE Supabase setup (run once in the SQL Editor).
--- Includes migrations 0001-0009 + seed. Safe to re-run (idempotent).
--- ============================================================================
+-- NIAT Records — COMPLETE Supabase setup (migrations 0001-0010 + seed). Idempotent.
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0001_core.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0001_core.sql <<<<<
 
 -- ============================================================================
 -- NIAT Records Platform — Core schema
@@ -182,7 +179,7 @@ create trigger on_auth_user_created after insert on auth.users
   for each row execute procedure handle_new_user();
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0002_rls.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0002_rls.sql <<<<<
 
 -- ============================================================================
 -- Row-Level Security
@@ -271,7 +268,7 @@ create policy p_sync_rows_read on sync_rows for select using (is_ops());
 -- key, which bypasses RLS entirely.
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0003_realtime.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0003_realtime.sql <<<<<
 
 -- ============================================================================
 -- Realtime — stream live changes to subscribed dashboards.
@@ -291,7 +288,7 @@ alter table result_summaries replica identity full;
 alter table students         replica identity full;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0004_views.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0004_views.sql <<<<<
 
 -- ============================================================================
 -- Aggregate view for the overview page. security_invoker = on (PG15+) so the
@@ -321,7 +318,7 @@ group by c.id, c.name, c.slug, c.code, c.hue, rs.semester_id;
 grant select on v_college_overview to authenticated, anon;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0005_admin_bootstrap.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0005_admin_bootstrap.sql <<<<<
 
 -- ============================================================================
 -- Admin bootstrap: emails listed here get the 'ops' role automatically on their
@@ -350,7 +347,7 @@ begin
 end $$;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0006_semester_modified.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0006_semester_modified.sql <<<<<
 
 -- Track each spreadsheet's last-seen Drive modifiedTime so the cron can skip
 -- unchanged files instead of re-reading them every minute.
@@ -360,7 +357,7 @@ alter table semesters add column if not exists last_modified_seen timestamptz;
 alter table semesters add column if not exists source_title text;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0007_universal.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0007_universal.sql <<<<<
 
 -- ============================================================================
 -- Universal adapter: colleges grade differently (marks / CIA-ESE / grade-points
@@ -376,7 +373,7 @@ alter table results add column if not exists metrics jsonb;         -- all raw p
 alter table college_sheets add column if not exists format text;    -- 'marks' | 'cia_ese' | 'grade_points' | ...
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0008_subjects_per_sheet.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0008_subjects_per_sheet.sql <<<<<
 
 -- ============================================================================
 -- Subjects are keyed per TAB (college_sheet), not per (semester, college).
@@ -389,7 +386,7 @@ alter table subjects drop constraint if exists subjects_semester_id_college_id_p
 create unique index if not exists subjects_sheet_position_key on subjects(college_sheet_id, position);
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> migrations/0009_subject_views.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0009_subject_views.sql <<<<<
 
 -- ============================================================================
 -- Subject-wise drill-down. security_invoker so RLS applies (ops = all,
@@ -427,7 +424,38 @@ grant execute on function subject_stats(uuid, uuid) to authenticated, anon;
 grant execute on function subject_students(uuid) to authenticated, anon;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> seed.sql <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>> migrations/0010_recompute.sql <<<<<
+
+-- ============================================================================
+-- Recompute each student's per-semester summary from the ACTUAL results across
+-- ALL their tabs. Fixes multi-tab colleges (e.g. Aurora Term-I + Term-II) where
+-- each tab wrote the summary independently and the last one overwrote the other.
+-- overall = pass when 0 failed subjects, fail when >=1, in_progress when none graded.
+-- ============================================================================
+
+create or replace function recompute_summaries(p_semester uuid) returns void
+language sql security definer set search_path = public as $$
+  update result_summaries rs set
+    subjects_failed = case when g.graded = 0 then null else g.fails end,
+    overall = case when g.graded = 0 then 'in_progress'::overall_status
+                   when g.fails = 0 then 'pass'::overall_status
+                   else 'fail'::overall_status end,
+    updated_at = now()
+  from (
+    select r.student_id, r.semester_id,
+      count(*) filter (where r.passed = false)::int as fails,
+      count(*) filter (where r.passed is not null or r.total_pct is not null or r.grade is not null)::int as graded
+    from results r
+    where r.semester_id = p_semester
+    group by r.student_id, r.semester_id
+  ) g
+  where rs.student_id = g.student_id and rs.semester_id = g.semester_id;
+$$;
+
+grant execute on function recompute_summaries(uuid) to service_role, authenticated;
+
+
+-- >>>>> seed.sql <<<<<
 
 -- ============================================================================
 -- Seed: the 19 live colleges + the Batch 2025 · Semester 1 spreadsheet.
