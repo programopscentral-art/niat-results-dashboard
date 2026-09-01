@@ -11,22 +11,23 @@ export default async function CollegePage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: college } = await supabase
-    .from('colleges').select('id, name, code, slug, hue').eq('slug', slug).maybeSingle();
+  // College lookup + selected semester are independent → fetch in parallel.
+  const [{ data: college }, sem] = await Promise.all([
+    supabase.from('colleges').select('id, name, code, slug, hue').eq('slug', slug).maybeSingle(),
+    getSelectedSemester(),
+  ]);
   if (!college) notFound();
 
-  const sem = await getSelectedSemester();
-
-  const [{ data: students }, { data: summaries }] = await Promise.all([
+  // Students, summaries and subject stats are independent → one parallel batch.
+  const [{ data: students }, { data: summaries }, { data: subjectStats }] = await Promise.all([
     supabase.from('students')
       .select('id, uid, full_name, university_id, bits_id, college_id, is_flagged, flag_reason')
       .eq('college_id', college.id),
     supabase.from('result_summaries')
       .select('student_id, semester_id, college_id, total_cgpa, total_pct, subjects_failed, overall, data_complete')
       .eq('college_id', college.id).eq('semester_id', sem?.id ?? ''),
+    supabase.rpc('subject_stats', { p_semester: sem?.id ?? '', p_college: college.id }),
   ]);
-
-  const { data: subjectStats } = await supabase.rpc('subject_stats', { p_semester: sem?.id ?? '', p_college: college.id });
 
   const byStudent = new Map<string, Summary>((summaries ?? []).map((s: any) => [s.student_id, s]));
   const rows: StudentRow[] = ((students ?? []) as Student[])
