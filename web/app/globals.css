@@ -303,3 +303,21 @@ tbody tr{content-visibility:auto;contain-intrinsic-size:auto 47px}
 /* Cheap GPU pulse (opacity) instead of animating box-shadow every frame. */
 @keyframes beat{0%,100%{opacity:1}50%{opacity:.35}}
 .ln-dot,.foot-live i,.live .d{box-shadow:none!important;animation:beat 2s ease-in-out infinite}
+
+/* ============ sources / sheets page ============ */
+.navlink{text-decoration:none}
+@media(max-width:760px){.navlink{display:none}}
+.src-list{display:flex;flex-direction:column;gap:14px}
+.src-card{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:16px;padding:18px 20px;transition:border-color .2s}
+.src-card:hover{border-color:var(--line-2)}
+.src-main{min-width:0}
+.src-title{font-family:"Satoshi",sans-serif;font-weight:800;font-size:1.1rem}
+.src-sub{color:var(--fg-soft);font-size:.82rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52ch}
+.src-stats{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:.82rem;color:var(--fg-soft)}
+.src-stats b{color:var(--fg);font-family:"JetBrains Mono"}
+.src-await{color:var(--warn);font-weight:600}
+.src-sync{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono";font-size:.76rem}
+.src-sync i{width:8px;height:8px;border-radius:50%;background:var(--good);animation:beat 2s ease-in-out infinite}
+.src-actions{display:flex;gap:10px;align-items:center;flex:none}
+.src-actions .btn-p{text-decoration:none;display:inline-flex;align-items:center}
+.src-note{margin-top:22px;color:var(--fg-soft);font-size:.85rem;background:var(--panel-3);border:1px solid var(--line);border-radius:12px;padding:14px 16px;line-height:1.6}

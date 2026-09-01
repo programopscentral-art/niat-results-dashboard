@@ -43,6 +43,7 @@ export function TopBar({ email, role, semesters, selectedId }:
         <SemesterSwitcher semesters={semesters} selectedId={selectedId} isOps={isOps} />
         <GlobalSearch />
         <div className="spacer" />
+        {isOps && <Link href="/sources" className="ghost navlink">📄 Sheets</Link>}
         {role && <span className="pillrole" title={email}>{role === 'college_staff' ? 'College' : role.toUpperCase()}</span>}
         <div className="seg" role="group" aria-label="Theme">
           {THEMES.map((t) => (
