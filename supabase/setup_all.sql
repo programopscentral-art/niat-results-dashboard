@@ -329,7 +329,8 @@ create table if not exists admin_emails (email text primary key);
 
 insert into admin_emails (email) values
   ('programopscentral@nxtwave.in'),
-  ('nalamasa.sanjay@nxtwave.co.in')
+  ('nalamasa.sanjay@nxtwave.co.in'),
+  ('perisetti.sunil@nxtwave.co.in')
 on conflict (email) do nothing;
 
 -- Recreate the signup handler to honor the allowlist.
