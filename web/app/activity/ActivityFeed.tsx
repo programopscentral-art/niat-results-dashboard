@@ -28,7 +28,7 @@ function relTime(iso: string): string {
 }
 function absTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
-    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
 
@@ -126,7 +126,9 @@ export function ActivityFeed({ initial, colleges, isOps }: {
                   </ul>
                 )}
                 <div className="act-meta">
-                  <span title={absTime(e.detectedAt)}>{relTime(e.detectedAt)}</span>
+                  <span className="act-abs">{absTime(e.detectedAt)}</span>
+                  <span className="act-sep">·</span>
+                  <span>{relTime(e.detectedAt)}</span>
                   {e.editor && <><span className="act-sep">·</span><span>last edited by {e.editor}</span></>}
                 </div>
               </div>
