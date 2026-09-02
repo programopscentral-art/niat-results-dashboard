@@ -78,6 +78,7 @@ Apps Script push (`apps-script/Code.gs`) is OPTIONAL (drops latency 60s→~3s); 
   - `app/page.tsx` (overview), `app/colleges/[slug]` (CollegeExplorer → StudentsClient + SubjectExplorer),
     `app/students/[uid]` (detail + cross-semester timeline + Print/PDF), `app/sources` (ops Sheets list),
     `app/access` (ops-only Access Management: grant roles/college by email; AccessManager.tsx),
+    `app/activity` (live sheet-change feed; ActivityFeed.tsx — Realtime, per-college filter, field diffs),
     `app/login`, `app/auth/callback/route.ts`, `app/api/semesters/route.ts` (ops-only add-semester),
     `app/api/access/route.ts` (ops-only grant/revoke access).
   - `app/components/` — TopBar (logo, semester switcher, GlobalSearch, Sheets link, theme, sign out),
@@ -96,7 +97,10 @@ Apps Script push (`apps-script/Code.gs`) is OPTIONAL (drops latency 60s→~3s); 
 `subjects` (per **college_sheet**, position, name — so Aurora Term-I/II don't collide; migration 0008) ·
 **`results`** (one row per student·per subject: internal_pct, external_pct, total_pct, passed, score, grade, **metrics jsonb** = all raw cells) ·
 `result_summaries` (per student·semester: total_cgpa, subjects_failed, overall, data_complete) ·
-`sync_rows` (row-hash audit + raw jsonb, soft-delete) · `sync_runs` (observability) ·
+`sync_rows` (row-hash audit + subject-qualified raw jsonb, soft-delete; **keyed per
+college_sheet** since migration 0015 — multi-tab colleges like Aurora share a college_id
+and collided when keyed per college) · `sync_runs` (observability) ·
+`change_events` (activity log: op/college/uid/name/field-diffs/editor/detected_at; migration 0014; realtime) ·
 `profiles` (role, college_id) · `admin_emails` (auto-ops allowlist) ·
 `access_grants` (email→role/college pre-authorization; migration 0013).
 
@@ -130,6 +134,11 @@ theory-IA). The parser is generic:
    from `results` across ALL tabs so multi-term colleges like Aurora combine correctly.) A passing student
    with source CGPA exactly 0 → shown blank (not 0.00).
 7. Dedupe duplicate UIDs within a tab; `flag_cross_college_uids()` flags a UID that appears in >1 college tab.
+8. **Subject name = the human name, not just the code.** Header cells can be multi-line
+   (`UGPHY105\nAPPLIED PHYSICS` or `Name\n(100)`); `cleanSubjectName` keeps the descriptive
+   line and appends the code → `APPLIED PHYSICS (UGPHY105)`. The `raw` snapshot stored per row
+   is **subject-qualified** (`APPLIED PHYSICS · External Score %`) so the activity-log diff can
+   name the exact subject+metric an ops edited.
 
 ---
 
