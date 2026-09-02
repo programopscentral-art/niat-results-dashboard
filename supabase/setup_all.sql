@@ -1,4 +1,4 @@
--- NIAT Records — COMPLETE Supabase setup (migrations 0001-0012 + seed). Idempotent.
+-- NIAT Records — COMPLETE Supabase setup (migrations 0001-0013 + seed). Idempotent.
 
 -- >>>>> migrations/0001_core.sql <<<<<
 
@@ -552,4 +552,47 @@ join (values
 ) as v(tab, ccode, term) on true
 join colleges c on c.code = v.ccode
 on conflict (semester_id, tab_name) do nothing;
+
+
+-- >>>>> migrations/0013_access_management.sql <<<<<
+-- Access management: ops assign roles/college scope from the dashboard UI.
+create table if not exists access_grants (
+  email      text primary key,
+  role       app_role not null default 'college_staff',
+  college_id uuid references colleges(id) on delete set null,
+  note       text,
+  created_by text,
+  created_at timestamptz not null default now()
+);
+
+alter table access_grants enable row level security;
+
+drop policy if exists p_access_grants_ops on access_grants;
+create policy p_access_grants_ops on access_grants for all
+  to authenticated using (is_ops()) with check (is_ops());
+
+drop policy if exists p_profiles_ops_update on profiles;
+create policy p_profiles_ops_update on profiles for update
+  to authenticated using (is_ops()) with check (is_ops());
+
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  r   app_role;
+  cid uuid;
+begin
+  if exists (select 1 from admin_emails a where a.email = new.email) then
+    r := 'ops'::app_role; cid := null;
+  else
+    select ag.role, ag.college_id into r, cid from access_grants ag where ag.email = new.email;
+    if not found then r := 'college_staff'::app_role; cid := null; end if;
+  end if;
+
+  insert into public.profiles (id, email, full_name, role, college_id)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', new.email), r, cid)
+  on conflict (id) do update set role = excluded.role, college_id = excluded.college_id;
+  return new;
+end $$;
+
+grant select, insert, update, delete on access_grants to authenticated;
 

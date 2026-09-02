@@ -44,6 +44,7 @@ export function TopBar({ email, role, semesters, selectedId }:
         <GlobalSearch />
         <div className="spacer" />
         {isOps && <Link href="/sources" className="ghost navlink">📄 Sheets</Link>}
+        {isOps && <Link href="/access" className="ghost navlink">👥 Access</Link>}
         {role && <span className="pillrole" title={email}>{role === 'college_staff' ? 'College' : role.toUpperCase()}</span>}
         <div className="seg" role="group" aria-label="Theme">
           {THEMES.map((t) => (
