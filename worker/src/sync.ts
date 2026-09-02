@@ -195,6 +195,8 @@ export async function syncSemester(sem: SemesterRow, trigger = 'cron'): Promise<
   }
   // Combine multi-tab colleges (e.g. Aurora terms) into one correct summary per student.
   await supa.rpc('recompute_summaries', { p_semester: sem.id });
+  // Flag any UID that appears in more than one college tab (source-sheet error).
+  await supa.rpc('flag_cross_college_uids');
   return out;
 }
 

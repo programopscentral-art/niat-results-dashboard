@@ -212,6 +212,8 @@ export function parseTab(grid: string[][]): ParsedTab {
       }
     }
     if (!uid) continue; // no identifiable student
+    // Skip spreadsheet error values that leaked into the UID cell (#N/A, #REF!, etc.)
+    if (/^#(n\/?a|ref|value|name|div\/0|error|null|num)/i.test(uid)) continue;
     const fullName = findId(/name/i);
     const universityId = findId(/univ(ersity)?\.?\s*id/i);
     const bitsId = findId(/bits\s*id/i);
@@ -234,7 +236,8 @@ export function parseTab(grid: string[][]): ParsedTab {
       const cGrade = pick(g, /(^|\s)grade$|letter\s*grade/i); // "Grade", not "Grade Point"
       const cGp = pick(g, /grade\s*point|course\s*point|points?/i);
       // Some colleges (e.g. ADYPU) put multiple Pass/Fail columns per subject
-      // (internal + external). A subject passes only if EVERY stated Pass/Fail is a pass.
+      // (internal result, then external result). The AUTHORITATIVE one is the last
+      // (adjacent to the Total / final score) — matches the college's own counts.
       const passCols = g.cols.filter((c) => /pass|result/i.test(fl(c)));
       const passVals = passCols.map((c) => passFail(cell(c))).filter((v): v is boolean => v !== null);
 
@@ -260,7 +263,7 @@ export function parseTab(grid: string[][]): ParsedTab {
       const gp = cGp != null ? num(cell(cGp)) : null;
       const score = total ?? gp ?? null;
 
-      let passed: boolean | null = passVals.length ? passVals.every((v) => v) : null;
+      let passed: boolean | null = passVals.length ? passVals[passVals.length - 1] : null;
       if (passed == null && grade) passed = !/^(f|ra|ab|fail|absent)$/i.test(grade);
       // Derive from total ONLY when there's a real score (>0). A 0/blank with no
       // Pass/Fail and no grade = not graded / non-academic column (e.g. NCC, community

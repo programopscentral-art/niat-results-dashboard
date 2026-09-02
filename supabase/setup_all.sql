@@ -1,4 +1,4 @@
--- NIAT Records — COMPLETE Supabase setup (migrations 0001-0010 + seed). Idempotent.
+-- NIAT Records — COMPLETE Supabase setup (migrations 0001-0012 + seed). Idempotent.
 
 -- >>>>> migrations/0001_core.sql <<<<<
 
@@ -453,6 +453,40 @@ language sql security definer set search_path = public as $$
 $$;
 
 grant execute on function recompute_summaries(uuid) to service_role, authenticated;
+
+
+-- >>>>> migrations/0011_semester_sources.sql <<<<<
+
+-- Per-semester source stats for the ops "Sheets" page. security_invoker → RLS applies.
+create or replace function semester_sources()
+returns table (semester_id uuid, tabs int, colleges int, students int, awaiting int, last_synced timestamptz)
+language sql stable security invoker set search_path = public as $$
+  select s.id,
+    (select count(*) from college_sheets cs where cs.semester_id = s.id)::int,
+    (select count(distinct cs.college_id) from college_sheets cs where cs.semester_id = s.id)::int,
+    (select count(*) from result_summaries rs where rs.semester_id = s.id)::int,
+    (select count(*) from college_sheets cs where cs.semester_id = s.id and coalesce(cs.row_count, 0) = 0)::int,
+    (select max(cs.last_synced_at) from college_sheets cs where cs.semester_id = s.id)
+  from semesters s;
+$$;
+grant execute on function semester_sources() to authenticated, anon;
+
+
+-- >>>>> migrations/0012_flag_cross_college.sql <<<<<
+
+-- Flag students whose UID appears in more than one college tab (source-sheet error:
+-- a UUID pasted into two colleges). Surfaces the ⚑ badge so ops fixes it at source.
+create or replace function flag_cross_college_uids() returns void
+language sql security definer set search_path = public as $$
+  update students set is_flagged = true,
+    flag_reason = 'Same UID appears in multiple college tabs — verify source sheet'
+  where uid in (
+    select uid from sync_rows where deleted_at is null
+    group by semester_id, uid having count(distinct college_id) > 1
+  )
+  and coalesce(flag_reason, '') not like 'UID column holds%';
+$$;
+grant execute on function flag_cross_college_uids() to service_role, authenticated;
 
 
 -- >>>>> seed.sql <<<<<
