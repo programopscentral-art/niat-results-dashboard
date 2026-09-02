@@ -77,7 +77,9 @@ Apps Script push (`apps-script/Code.gs`) is OPTIONAL (drops latency 60s→~3s); 
   - `lib/semester.ts` — selected semester via `sel_sem` cookie. `lib/format.ts`, `lib/csv.ts`, `lib/types.ts`.
   - `app/page.tsx` (overview), `app/colleges/[slug]` (CollegeExplorer → StudentsClient + SubjectExplorer),
     `app/students/[uid]` (detail + cross-semester timeline + Print/PDF), `app/sources` (ops Sheets list),
-    `app/login`, `app/auth/callback/route.ts`, `app/api/semesters/route.ts` (ops-only add-semester).
+    `app/access` (ops-only Access Management: grant roles/college by email; AccessManager.tsx),
+    `app/login`, `app/auth/callback/route.ts`, `app/api/semesters/route.ts` (ops-only add-semester),
+    `app/api/access/route.ts` (ops-only grant/revoke access).
   - `app/components/` — TopBar (logo, semester switcher, GlobalSearch, Sheets link, theme, sign out),
     SemesterSwitcher, AddSemesterModal, GlobalSearch, Footer.
   - `app/globals.css` — NIAT design tokens + all component styles.
@@ -95,7 +97,14 @@ Apps Script push (`apps-script/Code.gs`) is OPTIONAL (drops latency 60s→~3s); 
 **`results`** (one row per student·per subject: internal_pct, external_pct, total_pct, passed, score, grade, **metrics jsonb** = all raw cells) ·
 `result_summaries` (per student·semester: total_cgpa, subjects_failed, overall, data_complete) ·
 `sync_rows` (row-hash audit + raw jsonb, soft-delete) · `sync_runs` (observability) ·
-`profiles` (role, college_id) · `admin_emails`.
+`profiles` (role, college_id) · `admin_emails` (auto-ops allowlist) ·
+`access_grants` (email→role/college pre-authorization; migration 0013).
+
+**Access model:** on first login, `handle_new_user()` sets the role: in `admin_emails` ⇒ `ops`;
+else a matching `access_grants` row ⇒ its role/college; else `college_staff` with NO college (= sees
+nothing until granted). Ops manage this from **/access** (grant by email — works before or after first
+login; change role/college; revoke). RLS lets ops UPDATE profiles + CRUD access_grants (migration 0013);
+all other writes remain service-role only.
 Views/RPCs: `v_college_overview`, `subject_stats(sem,college)`, `subject_students(subject)`,
 `semester_sources()`, `recompute_summaries(sem)`, `flag_cross_college_uids()`.
 Numeric cols widened to `(8,2)` (messy source values). RLS: ops all; college_staff own college.
