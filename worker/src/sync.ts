@@ -1,8 +1,22 @@
 import { supa } from './supabase.js';
-import { getTabValues, getTabValuesBatch, listTabs } from './sheets.js';
+import { getTabValues, getTabValuesBatch, listTabs, getLastEditor } from './sheets.js';
 import { parseTab, type ParsedStudent } from './parser.js';
 import { rowHash } from './hash.js';
 import { config } from './config.js';
+
+const nrm = (v: unknown) => (v == null ? '' : String(v)).trim();
+
+/** Field-level diff of two raw row snapshots → [{field, old, new}] (capped). */
+function diffRaw(prev: Record<string, string> = {}, next: Record<string, string> = {}, cap = 40) {
+  const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+  const changes: { field: string; old: string; new: string }[] = [];
+  for (const k of keys) {
+    const a = nrm(prev[k]), b = nrm(next[k]);
+    if (a !== b) changes.push({ field: k, old: a, new: b });
+    if (changes.length >= cap) break;
+  }
+  return changes;
+}
 
 interface SheetRow {
   id: string;
@@ -53,11 +67,14 @@ export async function syncTab(sem: SemesterRow, sheet: SheetRow, trigger = 'webh
 
 /** Sync a single tab from an already-fetched grid (used by the batched cron). */
 export async function syncTabWithGrid(
-  sem: SemesterRow, sheet: SheetRow, grid: string[][], trigger = 'cron',
+  sem: SemesterRow, sheet: SheetRow, grid: string[][], trigger = 'cron', editor: string | null = null,
 ): Promise<SyncResult> {
   const run = await startRun(sem.id, sheet.college_id, trigger);
   const warnings: string[] = [];
   let inserted = 0, updated = 0, deleted = 0, flagged = 0;
+  // Backfills reload everything at once → don't flood the activity log with them.
+  const logChanges = trigger !== 'backfill';
+  const changeEvents: any[] = [];
 
   try {
     const parsed = parseTab(grid);
@@ -84,11 +101,23 @@ export async function syncTabWithGrid(
       posToSubjectId = new Map((subs ?? []).map((s: any) => [s.position, s.id]));
     }
 
-    // 2) Existing hashes for change-detection
-    const { data: existingRows } = await supa.from('sync_rows')
-      .select('uid, row_hash, deleted_at').eq('semester_id', sem.id).eq('college_id', sheet.college_id);
-    const prevHash = new Map<string, { hash: string; deleted: boolean }>();
-    (existingRows ?? []).forEach((r: any) => prevHash.set(r.uid, { hash: r.row_hash, deleted: !!r.deleted_at }));
+    // 2) Existing hashes + raw snapshots for change-detection / field-level diffs.
+    //    PostgREST caps .select() at 1000 rows — paginate, or colleges >1000 students
+    //    (CDU, Aurora) would see their tail rows as "new" every sync (false inserts +
+    //    bogus activity-log spam).
+    const existingRows: any[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supa.from('sync_rows')
+        .select('uid, row_hash, deleted_at, raw')
+        .eq('semester_id', sem.id).eq('college_sheet_id', sheet.id)
+        .range(from, from + 999);
+      if (error) throw error;
+      if (!data?.length) break;
+      existingRows.push(...data);
+      if (data.length < 1000) break;
+    }
+    const prevHash = new Map<string, { hash: string; deleted: boolean; raw: Record<string, string> }>();
+    existingRows.forEach((r: any) => prevHash.set(r.uid, { hash: r.row_hash, deleted: !!r.deleted_at, raw: r.raw ?? {} }));
 
     // 3) Upsert all students (identity) to obtain ids
     const studentRows = students.map((s) => ({
@@ -114,13 +143,27 @@ export async function syncTabWithGrid(
       currentUids.add(s.uid);
       const hash = rowHash(summaryKey(s));
       syncRowUpserts.push({
-        semester_id: sem.id, college_id: sheet.college_id, uid: s.uid,
+        semester_id: sem.id, college_id: sheet.college_id, college_sheet_id: sheet.id, uid: s.uid,
         row_hash: hash, raw: s.raw, deleted_at: null,
       });
       const prev = prevHash.get(s.uid);
       const changed = !prev || prev.hash !== hash || prev.deleted;
       if (!changed) continue;
+      const isUpdate = prev && !prev.deleted;
       if (prev) updated++; else inserted++;
+
+      // Record for the activity log (skip bulk backfills).
+      if (logChanges) {
+        const changes = isUpdate ? diffRaw(prev!.raw, s.raw) : [];
+        // An "update" whose only diffs are derived/summary noise (no cell changes) is skipped.
+        if (!isUpdate || changes.length) {
+          changeEvents.push({
+            semester_id: sem.id, college_id: sheet.college_id, uid: s.uid,
+            student_name: s.fullName, op: isUpdate ? 'update' : 'insert',
+            changes, editor, trigger,
+          });
+        }
+      }
 
       const studentId = uidToId.get(s.uid)!;
       for (const sub of s.subjects) {
@@ -151,21 +194,31 @@ export async function syncTabWithGrid(
     }
     if (syncRowUpserts.length) {
       const { error } = await supa.from('sync_rows')
-        .upsert(syncRowUpserts, { onConflict: 'semester_id,college_id,uid' });
+        .upsert(syncRowUpserts, { onConflict: 'semester_id,college_sheet_id,uid' });
       if (error) throw error;
     }
 
     // 5) Soft-delete rows that vanished from the sheet
     for (const [uid, meta] of prevHash) {
       if (meta.deleted || currentUids.has(uid)) continue;
-      const { data: st } = await supa.from('students').select('id').eq('uid', uid).maybeSingle();
+      const { data: st } = await supa.from('students').select('id, full_name').eq('uid', uid).maybeSingle();
       if (st?.id) {
         await supa.from('results').delete().eq('student_id', st.id).eq('semester_id', sem.id);
         await supa.from('result_summaries').delete().eq('student_id', st.id).eq('semester_id', sem.id);
       }
       await supa.from('sync_rows').update({ deleted_at: new Date().toISOString() })
-        .eq('semester_id', sem.id).eq('college_id', sheet.college_id).eq('uid', uid);
+        .eq('semester_id', sem.id).eq('college_sheet_id', sheet.id).eq('uid', uid);
+      if (logChanges) changeEvents.push({
+        semester_id: sem.id, college_id: sheet.college_id, uid,
+        student_name: st?.full_name ?? null, op: 'delete', changes: [], editor, trigger,
+      });
       deleted++;
+    }
+
+    // 5b) Record the activity log for this tab
+    if (changeEvents.length) {
+      const { error } = await supa.from('change_events').insert(changeEvents);
+      if (error) warnings.push(`change_events: ${error.message}`);
     }
 
     // 6) Update sheet metadata
@@ -188,9 +241,11 @@ export async function syncSemester(sem: SemesterRow, trigger = 'cron'): Promise<
   const sheets = await sheetsForSemester(sem.id);
   if (!sheets.length) return [];
   const grids = await getTabValuesBatch(sem.spreadsheet_id, sheets.map((s) => s.tab_name));
+  // Best-effort attribution for the activity log (skip the lookup on bulk backfills).
+  const editor = trigger === 'backfill' ? null : await getLastEditor(sem.spreadsheet_id);
   const out: SyncResult[] = [];
   for (const sheet of sheets) {
-    try { out.push(await syncTabWithGrid(sem, sheet, grids.get(sheet.tab_name) ?? [], trigger)); }
+    try { out.push(await syncTabWithGrid(sem, sheet, grids.get(sheet.tab_name) ?? [], trigger, editor)); }
     catch (e) { console.error(`[sync] ${sheet.tab_name} failed:`, e); }
   }
   // Combine multi-tab colleges (e.g. Aurora terms) into one correct summary per student.

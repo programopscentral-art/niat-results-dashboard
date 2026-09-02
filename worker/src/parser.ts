@@ -76,13 +76,27 @@ const ID_LABEL = /^(s\.?\s*no\.?|sl\.?\s*no\.?|uid|u\.?i\.?d\.?|name|student\s*n
 const SUMMARY_LABEL = /(total\s*cgpa|c?gpa|tgpa|sgpa|overall|subjects?\s*failed|no\.?\s*of\s*subjects|total\s*marks|total\s*credits?|total\s*points?|total\s*%$|total\s*percentage|grand\s*total|^result$)/i;
 const isIdentity = (label: string) => ID_LABEL.test(norm(label));
 
+// Subject header cells vary by college. They can be a single line, or a MULTI-LINE
+// merged cell holding both a course CODE and the human NAME, in either order, e.g.
+//   "UGPHY105\nAPPLIED PHYSICS"  or  "Applied Physics\n(100)"  or  "Data Structures".
+// We want the human-readable NAME to show — not just the code — so we keep the
+// descriptive line and append the code in parentheses when both are present.
+const SUBJECT_CODE_RE = /^[A-Za-z]{2,}[A-Za-z]*\d[A-Za-z0-9]*$/; // UGPHY105, UGSE101 (no spaces)
 function cleanSubjectName(raw: string): string | null {
   let s = norm(raw);
   if (!s || /mention subject name here|^\[subject/i.test(s)) return null;
-  s = s.split(/\s*[-–]\s*\[/)[0];  // strip " - [CODE]"
-  s = s.split('\n')[0];             // strip "\n(100)"
-  s = s.replace(/\s*\(\d+\)\s*$/, '').trim();
-  return s || null;
+  s = s.split(/\s*[-–]\s*\[/)[0]; // strip " - [CODE]" suffix
+  const parts = s
+    .split('\n')
+    .map((p) => p.replace(/\s*\(\d+\)\s*$/, '').trim()) // strip trailing "(100)" max-marks
+    .filter(Boolean)
+    .filter((p) => !/^\(?\d+\)?$/.test(p)); // drop pure "(100)" / "100" lines
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  const codes = parts.filter((p) => SUBJECT_CODE_RE.test(p) && !p.includes(' '));
+  const names = parts.filter((p) => !(SUBJECT_CODE_RE.test(p) && !p.includes(' ')));
+  if (names.length && codes.length) return `${names.join(' ')} (${codes[0]})`;
+  return parts.join(' ');
 }
 
 function looksLikeDataRow(row: string[]): boolean {
@@ -301,8 +315,21 @@ export function parseTab(grid: string[][]): ParsedTab {
     const flagged = suspiciousUid;
     const flagReason = suspiciousUid ? 'UID column holds a name — verify source sheet' : null;
 
+    // Snapshot every cell with a UNIQUE, human-readable key. Subject columns are
+    // qualified by subject name ("APPLIED PHYSICS · External Score %") so the change
+    // log can pinpoint exactly which subject/metric an ops edited (plain labels repeat).
     const raw: Record<string, string> = {};
-    for (let c = 0; c < width; c++) { const k = fl(c) || gl(c); if (k) raw[k] = cell(c); }
+    for (let c = 0; c < subjectStart; c++) { const k = fl(c) || gl(c); if (k) raw[k] = cell(c); }
+    subjectGroups.forEach((g, gi) => {
+      const gname = g.name || `Subject ${gi + 1}`;
+      for (const c of g.cols) {
+        const lbl = fl(c) || `col${c}`;
+        let key = `${gname} · ${lbl}`, k = 2;
+        while (key in raw) key = `${gname} · ${lbl} (${k++})`;
+        raw[key] = cell(c);
+      }
+    });
+    for (const c of summaryCols) { const k = fl(c) || gl(c); if (k && !(k in raw)) raw[k] = cell(c); }
 
     students.push({
       uid, fullName, universityId, bitsId, identity, subjects,

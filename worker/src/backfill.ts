@@ -10,7 +10,7 @@ async function main() {
 
   for (const sem of sems) {
     console.log(`\n=== Backfilling ${sem.spreadsheet_id} ===`);
-    const results = await syncSemester(sem as any);
+    const results = await syncSemester(sem as any, 'backfill');
     for (const r of results) {
       console.log(
         `  ${r.tab.padEnd(20)} processed=${r.processed} +${r.inserted} ~${r.updated} -${r.deleted}` +

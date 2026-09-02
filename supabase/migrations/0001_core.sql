@@ -106,13 +106,14 @@ create table if not exists result_summaries (
 
 -- ---------- Raw sheet rows (audit + change-detection via row hash) ----------
 create table if not exists sync_rows (
-  semester_id uuid not null references semesters(id) on delete cascade,
-  college_id  uuid not null references colleges(id)  on delete cascade,
-  uid         text not null,
-  row_hash    text not null,
-  raw         jsonb not null,
-  deleted_at  timestamptz,
-  primary key (semester_id, college_id, uid)
+  semester_id      uuid not null references semesters(id) on delete cascade,
+  college_id       uuid not null references colleges(id)  on delete cascade,
+  college_sheet_id uuid not null references college_sheets(id) on delete cascade,
+  uid              text not null,
+  row_hash         text not null,
+  raw              jsonb not null,
+  deleted_at       timestamptz,
+  primary key (semester_id, college_sheet_id, uid)
 );
 
 -- ---------- Sync run log (observability for ops) ----------

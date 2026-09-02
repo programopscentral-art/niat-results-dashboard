@@ -66,6 +66,21 @@ export async function getSpreadsheetTitle(spreadsheetId: string): Promise<string
   } catch { return null; }
 }
 
+/** Best-effort: the display name/email of whoever last edited the spreadsheet.
+ *  Read-only Sheets/Drive can't attribute individual CELLS, so this is the file's
+ *  last modifying user — a reasonable label for the batch of changes we just picked
+ *  up. Returns null if Drive doesn't expose it (permissions / personal account). */
+export async function getLastEditor(spreadsheetId: string): Promise<string | null> {
+  try {
+    const res = await withRetry(() => drive.files.get({
+      fileId: spreadsheetId, fields: 'lastModifyingUser(displayName,emailAddress)', supportsAllDrives: true,
+    }), 'lastEditor');
+    const u = res.data.lastModifyingUser;
+    if (!u) return null;
+    return u.displayName || u.emailAddress || null;
+  } catch { return null; }
+}
+
 /** Cheap single-file modifiedTime lookup (used to skip unchanged sheets). */
 export async function getModifiedTime(spreadsheetId: string): Promise<string | null> {
   try {

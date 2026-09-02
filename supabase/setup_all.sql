@@ -1,4 +1,4 @@
--- NIAT Records — COMPLETE Supabase setup (migrations 0001-0013 + seed). Idempotent.
+-- NIAT Records — COMPLETE Supabase setup (migrations 0001-0015 + seed). Idempotent.
 
 -- >>>>> migrations/0001_core.sql <<<<<
 
@@ -110,13 +110,14 @@ create table if not exists result_summaries (
 
 -- ---------- Raw sheet rows (audit + change-detection via row hash) ----------
 create table if not exists sync_rows (
-  semester_id uuid not null references semesters(id) on delete cascade,
-  college_id  uuid not null references colleges(id)  on delete cascade,
-  uid         text not null,
-  row_hash    text not null,
-  raw         jsonb not null,
-  deleted_at  timestamptz,
-  primary key (semester_id, college_id, uid)
+  semester_id      uuid not null references semesters(id) on delete cascade,
+  college_id       uuid not null references colleges(id)  on delete cascade,
+  college_sheet_id uuid not null references college_sheets(id) on delete cascade,
+  uid              text not null,
+  row_hash         text not null,
+  raw              jsonb not null,
+  deleted_at       timestamptz,
+  primary key (semester_id, college_sheet_id, uid)
 );
 
 -- ---------- Sync run log (observability for ops) ----------
@@ -595,4 +596,31 @@ begin
 end $$;
 
 grant select, insert, update, delete on access_grants to authenticated;
+
+
+-- >>>>> migrations/0014_change_events.sql <<<<<
+-- Activity log: every CRUD the worker detects in a sheet becomes a row here.
+create table if not exists change_events (
+  id           uuid primary key default gen_random_uuid(),
+  semester_id  uuid references semesters(id) on delete cascade,
+  college_id   uuid references colleges(id)  on delete cascade,
+  uid          text,
+  student_name text,
+  op           text not null,
+  changes      jsonb not null default '[]'::jsonb,
+  editor       text,
+  trigger      text,
+  detected_at  timestamptz not null default now()
+);
+create index if not exists idx_change_events_detected on change_events(detected_at desc);
+create index if not exists idx_change_events_college   on change_events(college_id, detected_at desc);
+
+alter table change_events enable row level security;
+drop policy if exists p_change_events_read on change_events;
+create policy p_change_events_read on change_events for select
+  using (is_ops() or college_id = auth_college());
+
+do $$ begin
+  alter publication supabase_realtime add table change_events;
+exception when duplicate_object then null; end $$;
 
