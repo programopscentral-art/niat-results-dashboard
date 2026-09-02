@@ -126,6 +126,9 @@ theory-IA). The parser is generic:
 3. **Pass/fail per subject** (order): explicit Pass/Fail column(s) → grade → total≥40. Fractions (0.79) are
    ×100 when the label is a %. **Multiple Pass/Fail columns (ADYPU): use the LAST/authoritative one**
    (adjacent to the Total), NOT "all must pass" — verified vs the sheet (Applied Physics = 97 fails).
+   The Pass/Fail column also uses **non-`Fail` non-pass tokens** that must read as fail (else they'd
+   fall through to total≥40 and wrongly pass the student): `E` (VGU essential-repeat), `I`/`Incomplete`/
+   `I grade`, `arrear(s)`/`backlog`/`reappear`, `WD`/`withdrawn` (see `passFail()`).
 4. **0/blank with no Pass/Fail/grade → `passed=null` (in progress), NEVER a fail** (handles VGU's NCC/
    community-service columns). A Total column that EXISTS but is blank ⇒ not graded (don't synthesize).
 5. Skip rows whose UID is a spreadsheet error (`#N/A`, `#REF!`, `#VALUE!`, …) or blank.

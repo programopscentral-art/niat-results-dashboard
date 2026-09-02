@@ -63,6 +63,12 @@ function passFail(v: unknown): boolean | null {
   if (t === '') return null;
   if (/^(pass|passed|p|clear|cleared|yes|y|promoted|eligible)$/.test(t)) return true;
   if (/^(fail|failed|f|no|n|ra|detained|ab|absent)$/.test(t)) return false;
+  // Non-pass markers some colleges put in the Pass/Fail column instead of "Fail":
+  //   E (VGU essential-repeat grade), I / Incomplete / "I grade", arrear(s) / backlog /
+  //   reappear (Crescent), WD / withdrawn. The Pass/Fail column is authoritative
+  //   (rule #3), so these must read as fail — NOT fall through to the total>=40 rule,
+  //   which would wrongly pass a student the sheet explicitly did not clear.
+  if (/^(e|i|arrear|arrears|backlog|reappear|re-?appear|incomplete|i\s*grade|wd|withdrawn)$/.test(t)) return false;
   return null;
 }
 
