@@ -107,7 +107,7 @@ export function StudentsClient({
       {counts.inc > 0 && (
         <div className="livenote">
           <span className="ln-dot" />
-          <span><b>{counts.inc} student{counts.inc === 1 ? '' : 's'} awaiting results.</b> Empty cells show as “In progress” — the dashboard updates <b>automatically within ~60&nbsp;seconds</b> as ops enters the scores in the sheet. No refresh needed.</span>
+          <span><b>{counts.inc} student{counts.inc === 1 ? '' : 's'} awaiting results.</b> These are students whose scores aren’t in the sheet yet — the dashboard updates <b>automatically within ~60&nbsp;seconds</b> as ops enters them. No refresh needed.</span>
         </div>
       )}
 
@@ -120,12 +120,16 @@ export function StudentsClient({
           {chip('pass', 'Passed', counts.passed)}
           {chip('backlog', 'Has backlogs', counts.backlog)}
           {chip('fail', 'Failed', counts.failed)}
-          {chip('inc', 'In progress', counts.inc)}
+          {chip('inc', 'Awaiting results', counts.inc)}
         </div>
         <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => downloadCsv(
           `${slug}-students.csv`,
           ['Name', 'UID', 'University ID', 'CGPA', 'Backlogs', 'Status'],
-          shown.map((r) => [r.full_name ?? '', r.uid, r.university_id ?? '', r.summary?.total_cgpa ?? '', r.summary?.subjects_failed ?? '', r.summary?.overall ?? 'in_progress']),
+          shown.map((r) => {
+            const ov = r.summary?.overall ?? 'in_progress';
+            const label = ov === 'pass' ? 'Passed' : ov === 'fail' ? 'Failed' : 'Awaiting results';
+            return [r.full_name ?? '', r.uid, r.university_id ?? '', r.summary?.total_cgpa ?? '', r.summary?.subjects_failed ?? '', label];
+          }),
         )}>⭳ Export CSV</button>
       </div>
 
@@ -153,7 +157,7 @@ export function StudentsClient({
                   <td>
                     {ov === 'pass' && <span className="pill pass"><span className="dot" />Passed</span>}
                     {ov === 'fail' && <span className="pill fail"><span className="dot" />Failed</span>}
-                    {ov === 'in_progress' && <span className="pill inc"><span className="dot" />In progress</span>}
+                    {ov === 'in_progress' && <span className="pill inc"><span className="dot" />Awaiting</span>}
                   </td>
                 </tr>
               );

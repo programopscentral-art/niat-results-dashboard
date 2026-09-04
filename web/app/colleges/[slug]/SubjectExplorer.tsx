@@ -55,7 +55,7 @@ export function SubjectExplorer({ subjectStats }:
               <div className="sj-counts">
                 <span className="c-pass">{s.pass} pass</span>
                 <span className="c-fail">{s.fail} fail</span>
-                {s.inprog > 0 && <span className="c-inp">{s.inprog} in progress</span>}
+                {s.inprog > 0 && <span className="c-inp">{s.inprog} awaiting</span>}
               </div>
               <div className="sj-bar"><i style={{ width: `${rate}%` }} /></div>
             </button>
@@ -69,7 +69,7 @@ export function SubjectExplorer({ subjectStats }:
           <>
             <div className="sd-head">
               <h3>{sel.name ?? `Subject ${sel.pos}`}{sel.term ? ` · ${sel.term}` : ''}</h3>
-              <div className="sd-sub">{sel.total} students · {sel.pass} passed · {sel.fail} failed{sel.inprog ? ` · ${sel.inprog} in progress` : ''}</div>
+              <div className="sd-sub">{sel.total} students · {sel.pass} passed · {sel.fail} failed{sel.inprog ? ` · ${sel.inprog} awaiting results` : ''}</div>
             </div>
             {sel.inprog > 0 && (
               <div className="livenote">
@@ -84,13 +84,13 @@ export function SubjectExplorer({ subjectStats }:
               <div className="chips">
                 <button className={`chip ${filter === 'all' ? 'on' : ''}`} onClick={() => setFilter('all')}>All<span className="c">{sel.total}</span></button>
                 <button className={`chip ${filter === 'fail' ? 'on' : ''}`} onClick={() => setFilter('fail')}>Failed<span className="c">{sel.fail}</span></button>
-                <button className={`chip ${filter === 'inprog' ? 'on' : ''}`} onClick={() => setFilter('inprog')}>In progress<span className="c">{sel.inprog}</span></button>
+                <button className={`chip ${filter === 'inprog' ? 'on' : ''}`} onClick={() => setFilter('inprog')}>Awaiting results<span className="c">{sel.inprog}</span></button>
                 <button className={`chip ${filter === 'pass' ? 'on' : ''}`} onClick={() => setFilter('pass')}>Passed<span className="c">{sel.pass}</span></button>
               </div>
               <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => downloadCsv(
                 `${(sel.name ?? 'subject').replace(/[^a-z0-9]+/gi, '-')}-${filter}.csv`,
                 ['Student', 'UID', 'Result', 'Status'],
-                shown.map((r) => [r.full_name ?? '', r.uid, headline(r), r.passed === true ? 'Pass' : r.passed === false ? 'Fail' : 'In progress']),
+                shown.map((r) => [r.full_name ?? '', r.uid, headline(r), r.passed === true ? 'Pass' : r.passed === false ? 'Fail' : 'Awaiting results']),
               )}>⭳ Export CSV</button>
             </div>
 
@@ -109,7 +109,7 @@ export function SubjectExplorer({ subjectStats }:
                         <td>
                           {st === 'pass' && <span className="pill pass"><span className="dot" />Pass</span>}
                           {st === 'fail' && <span className="pill fail"><span className="dot" />Fail</span>}
-                          {st === 'inprog' && <span className="pill inc"><span className="dot" />In progress</span>}
+                          {st === 'inprog' && <span className="pill inc"><span className="dot" />Awaiting</span>}
                         </td>
                       </tr>
                     );

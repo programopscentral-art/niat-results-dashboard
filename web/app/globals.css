@@ -115,7 +115,29 @@ main{max-width:1240px;margin:0 auto;padding:26px 22px 80px}
 .col-mini .t{font-size:.66rem;color:var(--fg-mute);margin-top:3px}
 .passbar{height:7px;border-radius:5px;background:var(--panel-3);overflow:hidden;border:1px solid var(--line)}
 .passbar i{display:block;height:100%;border-radius:5px;background:var(--grad-2)}
+.col-note{font-size:.76rem;color:var(--fg-soft);margin-top:10px;line-height:1.3}
+.col-note .cn-bad{color:var(--bad);font-weight:800}
+.col-note .cn-good{color:var(--good);font-weight:700}
+.col-note .cn-mute{color:var(--fg-mute)}
 .col-foot{display:flex;justify-content:space-between;font-size:.75rem;color:var(--fg-soft);margin-top:8px}
+
+/* "Yet to be announced" section */
+.await-sec{margin-top:38px}
+.await-head{margin-bottom:16px}
+.await-head h2{font-family:"Satoshi";font-weight:900;font-size:1.2rem;display:flex;align-items:center;gap:10px}
+.await-count{font-family:"JetBrains Mono";font-size:.72rem;font-weight:700;color:var(--accent-deep);background:color-mix(in srgb,var(--accent) 16%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:100px;padding:3px 10px}
+.await-head p{color:var(--fg-soft);font-size:.9rem;margin:6px 0 0;max-width:70ch}
+.await-card{position:relative;display:block;text-decoration:none;color:inherit;background:repeating-linear-gradient(135deg,var(--panel-2),var(--panel-2) 12px,var(--panel-3) 12px,var(--panel-3) 24px);border:1.5px dashed var(--line-2);border-radius:var(--radius);padding:20px;transition:transform .22s,border-color .22s}
+.await-card:hover{transform:translateY(-4px);border-color:var(--accent)}
+.await-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.await-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.await-top h3{font-size:1.05rem;font-weight:800;line-height:1.15}
+.await-top .code{font-family:"JetBrains Mono";font-size:.72rem;color:var(--fg-mute);margin-top:2px}
+.badge.muted{background:var(--panel-3);color:var(--fg-mute);border:1px solid var(--line);box-shadow:none}
+.await-tag{margin-left:auto;align-self:flex-start;font-family:"JetBrains Mono";font-size:.66rem;font-weight:700;color:var(--accent-deep);background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:100px;padding:3px 9px;white-space:nowrap}
+.await-msg{font-size:.9rem;color:var(--fg-soft)}
+.await-msg b{color:var(--fg)}
+.await-note{font-size:.76rem;color:var(--fg-mute);margin-top:8px}
 
 /* toolbar + table */
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
@@ -355,7 +377,8 @@ html{scroll-behavior:smooth}
 /* ============ scroll performance: skip rendering off-screen content ============ */
 /* Only visible rows/cards are painted → smooth scroll on 1000+ row tables. */
 tbody tr{content-visibility:auto;contain-intrinsic-size:auto 47px}
-.col-card{content-visibility:auto;contain-intrinsic-size:auto 210px}
+.col-card{content-visibility:auto;contain-intrinsic-size:auto 240px}
+.await-card{content-visibility:auto;contain-intrinsic-size:auto 150px}
 .subj{content-visibility:auto;contain-intrinsic-size:auto 230px}
 .subjcard{content-visibility:auto;contain-intrinsic-size:auto 120px}
 .tl-node{content-visibility:auto;contain-intrinsic-size:auto 130px}
