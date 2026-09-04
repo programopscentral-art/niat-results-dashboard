@@ -403,3 +403,58 @@ tbody tr{content-visibility:auto;contain-intrinsic-size:auto 47px}
 .src-actions{display:flex;gap:10px;align-items:center;flex:none}
 .src-actions .btn-p{text-decoration:none;display:inline-flex;align-items:center}
 .src-note{margin-top:22px;color:var(--fg-soft);font-size:.85rem;background:var(--panel-3);border:1px solid var(--line);border-radius:12px;padding:14px 16px;line-height:1.6}
+
+/* ============================================================================
+   Responsive / mobile — layout only (no logic changed). Appended last so these
+   overrides win by source order. Goal: nothing clips or overflows on phones,
+   and every control stays reachable.
+   ============================================================================ */
+
+/* --- Top bar: wrap onto multiple rows instead of clipping off the edge --- */
+@media (max-width:760px){
+  .bar{height:auto;min-height:56px;flex-wrap:wrap;gap:8px 10px;padding:10px 14px}
+  .spacer{display:none}                    /* drop the auto-push so items wrap left→right */
+  .semwrap{margin-left:0}
+  .navlink{display:inline-flex}            /* keep nav reachable on mobile */
+  .gsearch{display:flex;flex:1 1 100%;max-width:none;margin-left:0}  /* search on its own full-width row */
+  .gsearch .gs-drop{left:0;right:0}
+}
+
+/* --- Tablet / large phone --- */
+@media (max-width:760px){
+  main{padding:22px 16px 64px}
+  .acc-wrap{max-width:100%}
+  .subjexp{grid-template-columns:1fr}
+}
+
+/* --- Phone --- */
+@media (max-width:600px){
+  main{padding:18px 14px 60px}
+  .page-h h1{font-size:clamp(1.5rem,7vw,2rem)}
+  .kpi{padding:14px}
+  .kpi .val{font-size:1.7rem}
+  .col-card,.await-card{padding:17px}
+  .acc-card{padding:18px 16px}
+  .acc-row{gap:10px}
+  .acc-input{min-width:0}
+  .acc-ctl{width:100%}
+  .acc-ctl .acc-sel{flex:1 1 auto}
+  .modal{padding:20px}
+  .act-item{gap:10px;padding:12px 13px}
+  .viewtabs{width:100%}
+  .viewtabs button{flex:1}
+  .toolbar .search{max-width:none!important;flex:1 1 100%}
+}
+
+/* --- Small phone --- */
+@media (max-width:400px){
+  .bar{padding:9px 11px;gap:7px 8px}
+  .semsel{padding:7px 8px;font-size:.8rem}
+  .seg button{padding:6px 9px}
+  .ghost{padding:7px 10px}
+  .kpis{gap:10px}
+  .kpi .val{font-size:1.5rem}
+  .col-mini{gap:6px}
+  .col-mini div{padding:7px 4px}
+  .col-mini .n{font-size:.98rem}
+}
